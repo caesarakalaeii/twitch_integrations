@@ -6,7 +6,9 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npm exec tsc"
+    "build": "npm exec tsc",
+    "start:dev": "node -r ts-node/register src/start.ts",
+    "start": "node dist/start.js"
   },
   "keywords": [],
   "author": "",
