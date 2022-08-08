@@ -11,6 +11,7 @@ export type Config = {
     sub: number
     bit: number
   }
+  minBits: number
 }
 
 export async function main () {
@@ -30,7 +31,9 @@ export async function main () {
   })
 
   esub.on(EventName.CHEER, e => {
-    queue.add(() => relais.onFor('relais', config.time.bit * e.bits))
+    if (e.bits >= config.minBits) {
+      queue.add(() => relais.onFor('relais', config.time.bit * e.bits))
+    }
   })
 
   await esub.init()
