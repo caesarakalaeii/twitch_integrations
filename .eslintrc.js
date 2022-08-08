@@ -15,6 +15,7 @@ module.exports = {
     '@typescript-eslint'
   ],
   rules: {
-    '@typescript-eslint/no-unused-vars': 2
+    '@typescript-eslint/no-unused-vars': 2,
+    'no-dupe-class-members': 0
   }
 }

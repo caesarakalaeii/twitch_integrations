@@ -7,10 +7,16 @@ export type PinConfig = {
   options: Options
 }
 
-export type PinName = 'example'
+export type PinName = 'relais'
 
 export type RelaisConfig = {
   pin: {[U in PinName]: PinConfig}
+}
+
+function wait (time: number) {
+  return new Promise<void>(resolve => {
+    setTimeout(() => resolve(), time)
+  })
 }
 
 export class Relais {
@@ -22,7 +28,22 @@ export class Relais {
     }
   }
 
-  async exampleAction () {
-    await this.pin.example?.write(Gpio.HIGH)
+  async on (name: PinName) {
+    await this.pin[name]?.write(Gpio.HIGH)
+  }
+
+  async off (name: PinName) {
+    await this.pin[name]?.write(Gpio.LOW)
+  }
+
+  /**
+   * sets the given port on for a given time, then turns it off
+   * @param name name of the gpio pin
+   * @param time time in milliseconds
+   */
+  async onFor (name: PinName, time: number) {
+    this.on(name)
+      .then(() => wait(time))
+      .then(() => this.off(name))
   }
 }
