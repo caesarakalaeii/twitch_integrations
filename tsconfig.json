@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES3",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "declaration": true,
+    "sourceMap": true,
+    "sourceRoot": "src",
+    "outDir": "dist"
+  },
+  "include": ["src"],
+  "ts-node": {
+    "transpileOnly": true
+  }
+}
