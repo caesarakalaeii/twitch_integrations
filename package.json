@@ -26,6 +26,7 @@
   "dependencies": {
     "@twurple/api": "^5.2.0",
     "@twurple/auth": "^5.2.0",
-    "@twurple/eventsub": "^5.2.0"
+    "@twurple/eventsub": "^5.2.0",
+    "onoff": "^6.0.3"
   }
 }
