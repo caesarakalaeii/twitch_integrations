@@ -1,7 +1,28 @@
-import { ClientCredentialsAuthProvider } from '@twurple/auth'
 import { ApiClient } from '@twurple/api'
-import { DirectConnectionAdapter, DirectConnectionAdapterConfig, EventSubChannelCheerEvent, EventSubChannelSubscriptionEvent, EventSubChannelSubscriptionGiftEvent, EventSubListener, EventSubSubscription } from '@twurple/eventsub'
+import { ClientCredentialsAuthProvider } from '@twurple/auth'
+import {
+  ConnectionAdapter,
+  DirectConnectionAdapter,
+  DirectConnectionAdapterConfig,
+  EventSubChannelCheerEvent,
+  EventSubChannelSubscriptionEvent,
+  EventSubChannelSubscriptionGiftEvent,
+  EventSubListener,
+  EventSubSubscription,
+  ReverseProxyAdapter,
+  ReverseProxyAdapterConfig
+} from '@twurple/eventsub'
 import EventEmitter from 'events'
+
+export type DirectAdapterConfig = {
+  adapterType: 'direct'
+  adapter: DirectConnectionAdapterConfig
+}
+export type ProxyAdapterConfig = {
+  adapterType: 'proxy'
+  adapter: ReverseProxyAdapterConfig
+}
+export type AdapterConfig = DirectAdapterConfig | ProxyAdapterConfig
 
 export type Config = {
   /** some OAuth client id
@@ -12,8 +33,6 @@ export type Config = {
   clientSecret: string
   /** optional stuff for OAuth prly don't need it */
   impliedScopes?: string[]
-  /** this is for the webhook, since it assumes you use HTTPS you will need a cert */
-  adapter: DirectConnectionAdapterConfig
   /** this is supposed to be a randomly generated fixed string, so make sure you generate it exactly once */
   secret: string
   /** if you don't want to have your webhook listen directly to 443 (I'd recommend some apache2 proxy in front of this) */
@@ -21,7 +40,7 @@ export type Config = {
   /** your user id
    * @see https://google.com/search?q=twitch+user+id */
   user: string
-}
+} & AdapterConfig
 
 export enum EventName {
   SUB = 'sub',
@@ -32,14 +51,21 @@ export enum EventName {
 export class CaesarEventSub {
   private authProvider: ClientCredentialsAuthProvider
   private apiClient: ApiClient
-  private adapter: DirectConnectionAdapter
+  private adapter: ConnectionAdapter
   private listener: EventSubListener
   private event: EventEmitter = new EventEmitter()
 
   constructor (private config: Config) {
     this.authProvider = new ClientCredentialsAuthProvider(config.clientId, config.clientSecret, config.impliedScopes)
     this.apiClient = new ApiClient({ authProvider: this.authProvider })
-    this.adapter = new DirectConnectionAdapter(config.adapter)
+    switch (this.config.adapterType) {
+      case 'direct':
+        this.adapter = new DirectConnectionAdapter(this.config.adapter)
+        break
+      case 'proxy':
+        this.adapter = new ReverseProxyAdapter(this.config.adapter)
+        break
+    }
     this.listener = new EventSubListener({
       adapter: this.adapter,
       apiClient: this.apiClient,
