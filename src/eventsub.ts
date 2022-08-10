@@ -101,7 +101,7 @@ export class CaesarEventSub {
   private async handleSub (name: string, fn: () => Promise<EventSubSubscription>) {
     try {
       const sub = await fn()
-      console.log('sub', name, 'initialized')
+      console.log('eventsub', name, 'initialized')
       this.subscriptions.set(name, sub)
     } catch (err) {
       console.error('failed to initialize sub', name, 'reason:', err)
@@ -109,19 +109,20 @@ export class CaesarEventSub {
   }
 
   async init () {
-    await this.userAuth.auth()
+    await this.userAuth.getAccessToken()
+    console.log('user token received')
 
     const user = await this.apiClient.users.getUserByName(this.config.user)
     if (!user) throw new Error('can\'t find user by name: ' + this.config.user)
 
-    console.log('we have the user id:', user.id)
+    console.log('id for user', this.config.user, 'is', user.id)
     this.userId = user.id
 
     await this.apiClient.eventSub.deleteAllSubscriptions()
     console.log('deleted all subscriptions')
 
     await this.listener.listen()
-    .then(() => console.log('it seems the eventlistener do be listening'))
+    .then(() => console.log('webhook for eventsubs is listening'))
     .catch(err => { console.log('listener failed to listen', err) })
 
     this.handleSub('subs', () => this.listener.subscribeToChannelSubscriptionEvents({ id: this.userId }, e => {
@@ -146,7 +147,7 @@ export class CaesarEventSub {
   async stop () {
     for (const [name, sub] of Array.from(this.subscriptions.entries())) {
       await sub.stop()
-      console.log('sub', name, 'stopped')
+      console.log('eventsub', name, 'stopped')
     }
     await this.listener.unlisten()
     console.log('stopped listening')
