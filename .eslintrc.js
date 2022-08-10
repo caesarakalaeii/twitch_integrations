@@ -17,5 +17,8 @@ module.exports = {
   rules: {
     '@typescript-eslint/no-unused-vars': 2,
     'no-dupe-class-members': 0
+  },
+  global: {
+    BufferEncoding: ''
   }
 }

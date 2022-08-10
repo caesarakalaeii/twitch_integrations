@@ -1,4 +1,5 @@
 import { Gpio, Direction, Edge, Options } from 'onoff'
+import { wait } from './wait'
 
 export type PinConfig = {
   gpio: number,
@@ -11,12 +12,6 @@ export type PinName = 'relais'
 
 export type RelaisConfig = {
   pin: {[U in PinName]: PinConfig}
-}
-
-function wait (time: number) {
-  return new Promise<void>(resolve => {
-    setTimeout(() => resolve(), time)
-  })
 }
 
 export class Relais {
