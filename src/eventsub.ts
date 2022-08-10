@@ -83,6 +83,9 @@ export class CaesarEventSub {
   }
 
   async init () {
+    await this.authProvider.getAccessToken()
+    console.log('we did it boys, we have a token')
+
     const subSub = await this.listener.subscribeToChannelSubscriptionEvents(this.config.user, e => {
       // do something when a subscription was received
       console.log(e.userDisplayName, 'subscribed with a tier', e.tier, 'subscription')
