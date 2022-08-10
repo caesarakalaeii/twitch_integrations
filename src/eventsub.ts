@@ -1,5 +1,6 @@
 import { ApiClient } from '@twurple/api'
-import { ClientCredentialsAuthProvider } from '@twurple/auth'
+import { AuthProvider, ClientCredentialsAuthProvider } from '@twurple/auth'
+import { AuthServerConfig, AuthServer } from './authserver'
 import {
   ConnectionAdapter,
   DirectConnectionAdapter,
@@ -10,7 +11,7 @@ import {
   EventSubListener,
   EventSubSubscription,
   ReverseProxyAdapter,
-  ReverseProxyAdapterConfig
+  ReverseProxyAdapterConfig,
 } from '@twurple/eventsub'
 import EventEmitter from 'events'
 
@@ -24,23 +25,29 @@ export type ProxyAdapterConfig = {
 }
 export type AdapterConfig = DirectAdapterConfig | ProxyAdapterConfig
 
+export type UserAuthConfig = {
+  authType: 'user',
+  auth: AuthServerConfig
+}
+export type AppAuthConfig = {
+  authType: 'app',
+  auth: {
+    clientId: string
+    clientSecret: string
+    impliedScopes?: string[]
+  }
+}
+export type AuthConfig = UserAuthConfig | AppAuthConfig
+
 export type Config = {
-  /** some OAuth client id
-   * @see https://google.com/search?q=twitch+api+clientid */
-  clientId: string
-  /** some OAuth client secret
-   * @see https://google.com/search?q=twitch+api+clientsecret */
-  clientSecret: string
-  /** optional stuff for OAuth prly don't need it */
-  impliedScopes?: string[]
-  /** this is supposed to be a randomly generated fixed string, so make sure you generate it exactly once */
+
   secret: string
   /** if you don't want to have your webhook listen directly to 443 (I'd recommend some apache2 proxy in front of this) */
   port?: number
   /** your user id
    * @see https://google.com/search?q=twitch+user+id */
   user: string
-} & AdapterConfig
+} & AdapterConfig & AuthConfig
 
 export enum EventName {
   SUB = 'sub',
@@ -49,7 +56,7 @@ export enum EventName {
 }
 
 export class CaesarEventSub {
-  private authProvider: ClientCredentialsAuthProvider
+  private auth: AuthProvider
   private apiClient: ApiClient
   private adapter: ConnectionAdapter
   private listener: EventSubListener
@@ -57,8 +64,17 @@ export class CaesarEventSub {
   private userId: string
 
   constructor (private config: Config) {
-    this.authProvider = new ClientCredentialsAuthProvider(config.clientId, config.clientSecret, config.impliedScopes)
-    this.apiClient = new ApiClient({ authProvider: this.authProvider })
+    switch (this.config.authType) {
+      case 'app':
+        this.auth = new ClientCredentialsAuthProvider(this.config.auth.clientId, this.config.auth.clientSecret, this.config.auth.impliedScopes)
+        break
+      case 'user':
+        this.auth = new AuthServer(this.config.auth)
+        break
+    }
+    this.apiClient = new ApiClient({
+      authProvider: this.auth
+    })
     switch (this.config.adapterType) {
       case 'direct':
         this.adapter = new DirectConnectionAdapter(this.config.adapter)
@@ -84,45 +100,39 @@ export class CaesarEventSub {
   }
 
   async init () {
-    await this.authProvider.getAccessToken()
-    console.log('we did it boys, we have a token')
+    const user = await this.apiClient.users.getUserByName(this.config.user)
+    if (!user) throw new Error('can\'t find user by name: ' + this.config.user)
 
-    try {
-      const me = await this.apiClient.users.getMe()
-      this.userId = me.id
-    } catch (err) {
-      const user = await this.apiClient.users.getUserByName(this.config.user)
-      this.userId = user.id
-    }
+    console.log('we have the user id:', user.id)
+    this.userId = user.id
 
-    console.log('we have the user id:', this.userId)
+    await this.apiClient.eventSub.deleteAllSubscriptions()
+    console.log('deleted all subscriptions')
 
-    const subSub = await this.listener.subscribeToChannelSubscriptionEvents(this.userId, e => {
+    const subSub = await this.listener.subscribeToChannelSubscriptionEvents({ id: this.userId }, e => {
       // do something when a subscription was received
       console.log(e.userDisplayName, 'subscribed with a tier', e.tier, 'subscription')
       this.event.emit(EventName.SUB, e)
     })
     this.subscriptions.push(subSub)
-    console.log('we subscribed to subscription events')
 
-    const giftSub = await this.listener.subscribeToChannelSubscriptionGiftEvents(this.userId, e => {
+    const giftSub = await this.listener.subscribeToChannelSubscriptionGiftEvents({ id: this.userId }, e => {
       // do something when a sub was gifted
       console.log(e.gifterDisplayName, 'gifted', e.amount, 'tier', e.tier, 'subscriptions')
       this.event.emit(EventName.GIFTSUB, e)
     })
     this.subscriptions.push(giftSub)
-    console.log('we subscribed to subscription gift events')
 
-    const cheerSub = await this.listener.subscribeToChannelCheerEvents(this.userId, e => {
+    const cheerSub = await this.listener.subscribeToChannelCheerEvents({ id: this.userId }, e => {
       // do something when bits have been cheered
       console.log(e.userDisplayName, 'cheered', e.bits, 'with message:', e.message)
       this.event.emit(EventName.CHEER, e)
     })
     this.subscriptions.push(cheerSub)
-    console.log('we subscribed to bits events')
 
-    await this.listener.listen(this.config.port)
-    console.log('it seems the eventlistener do be listening')
+    await this.listener.listen()
+      .then(() => console.log('it seems the eventlistener do be listening'))
+      .catch(err => { console.log('listener failed to listen', err) })
   }
 
   async stop () {
