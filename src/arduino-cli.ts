@@ -21,6 +21,8 @@ async function main () {
   const serial = new SerialPort({
     path: args.path, baudRate: args.baud })
 
+  serial.pipe(process.stdout)
+
   while (true) {
     const { code } = await prompts({
       name: 'code',
@@ -28,7 +30,7 @@ async function main () {
       type: 'text'
     })
 
-    if (!code) continue
+    if (code === null) return
 
     const val = eval(code)
     await new Promise<void>((resolve, reject) => {
