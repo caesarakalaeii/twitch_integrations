@@ -31,10 +31,10 @@ async function main () {
     if (!code) continue
 
     const val = eval(code)
-    console.log('writing', val, 'to serial')
     await new Promise<void>((resolve, reject) => {
       serial.write(val, (err) => {
         if (err) return reject(err)
+        console.log('wrote', val, 'to serial')
         resolve()
       })
     })
