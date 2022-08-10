@@ -54,6 +54,7 @@ export class CaesarEventSub {
   private adapter: ConnectionAdapter
   private listener: EventSubListener
   private event: EventEmitter = new EventEmitter()
+  private userId: string
 
   constructor (private config: Config) {
     this.authProvider = new ClientCredentialsAuthProvider(config.clientId, config.clientSecret, config.impliedScopes)
@@ -85,10 +86,18 @@ export class CaesarEventSub {
   async init () {
     await this.authProvider.getAccessToken()
     console.log('we did it boys, we have a token')
-    await this.listener.listen(this.config.port)
-    console.log('it seems the eventlistener do be listening')
 
-    const subSub = await this.listener.subscribeToChannelSubscriptionEvents(this.config.user, e => {
+    try {
+      const me = await this.apiClient.users.getMe()
+      this.userId = me.id
+    } catch (err) {
+      const user = await this.apiClient.users.getUserByName(this.config.user)
+      this.userId = user.id
+    }
+
+    console.log('we have the user id:', this.userId)
+
+    const subSub = await this.listener.subscribeToChannelSubscriptionEvents(this.userId, e => {
       // do something when a subscription was received
       console.log(e.userDisplayName, 'subscribed with a tier', e.tier, 'subscription')
       this.event.emit(EventName.SUB, e)
@@ -96,7 +105,7 @@ export class CaesarEventSub {
     this.subscriptions.push(subSub)
     console.log('we subscribed to subscription events')
 
-    const giftSub = await this.listener.subscribeToChannelSubscriptionGiftEvents(this.config.user, e => {
+    const giftSub = await this.listener.subscribeToChannelSubscriptionGiftEvents(this.userId, e => {
       // do something when a sub was gifted
       console.log(e.gifterDisplayName, 'gifted', e.amount, 'tier', e.tier, 'subscriptions')
       this.event.emit(EventName.GIFTSUB, e)
@@ -104,13 +113,16 @@ export class CaesarEventSub {
     this.subscriptions.push(giftSub)
     console.log('we subscribed to subscription gift events')
 
-    const cheerSub = await this.listener.subscribeToChannelCheerEvents(this.config.user, e => {
+    const cheerSub = await this.listener.subscribeToChannelCheerEvents(this.userId, e => {
       // do something when bits have been cheered
       console.log(e.userDisplayName, 'cheered', e.bits, 'with message:', e.message)
       this.event.emit(EventName.CHEER, e)
     })
     this.subscriptions.push(cheerSub)
     console.log('we subscribed to bits events')
+
+    await this.listener.listen(this.config.port)
+    console.log('it seems the eventlistener do be listening')
   }
 
   async stop () {
