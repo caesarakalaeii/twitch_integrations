@@ -85,6 +85,8 @@ export class CaesarEventSub {
   async init () {
     await this.authProvider.getAccessToken()
     console.log('we did it boys, we have a token')
+    await this.listener.listen(this.config.port)
+    console.log('it seems the eventlistener do be listening')
 
     const subSub = await this.listener.subscribeToChannelSubscriptionEvents(this.config.user, e => {
       // do something when a subscription was received
@@ -92,6 +94,7 @@ export class CaesarEventSub {
       this.event.emit(EventName.SUB, e)
     })
     this.subscriptions.push(subSub)
+    console.log('we subscribed to subscription events')
 
     const giftSub = await this.listener.subscribeToChannelSubscriptionGiftEvents(this.config.user, e => {
       // do something when a sub was gifted
@@ -99,6 +102,7 @@ export class CaesarEventSub {
       this.event.emit(EventName.GIFTSUB, e)
     })
     this.subscriptions.push(giftSub)
+    console.log('we subscribed to subscription gift events')
 
     const cheerSub = await this.listener.subscribeToChannelCheerEvents(this.config.user, e => {
       // do something when bits have been cheered
@@ -106,8 +110,7 @@ export class CaesarEventSub {
       this.event.emit(EventName.CHEER, e)
     })
     this.subscriptions.push(cheerSub)
-
-    await this.listener.listen(this.config.port)
+    console.log('we subscribed to bits events')
   }
 
   async stop () {
