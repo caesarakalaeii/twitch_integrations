@@ -67,7 +67,7 @@ export class AuthServer implements AuthProvider {
   get clientId (): string {
     return this.config.clientId
   }
-  tokenType: AuthProviderTokenType = 'user'
+  tokenType: AuthProviderTokenType = 'app'
   authorizationType?: string
   currentScopes: string[]
 
