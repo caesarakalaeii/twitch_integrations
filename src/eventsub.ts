@@ -173,6 +173,11 @@ export class CaesarEventSub {
           }),
         handler: async args => {
           const sub = this.subscriptions.get(args.name)
+          if (!sub) {
+            console.log('you need to tell me what subscription you want, available are:', Array.from(this.subscriptions.keys()))
+            return
+          }
+
           const test = await sub.getCliTestCommand()
           const [cmd, ...cmdArgs] = stringArgv(test)
           console.log('cmd:', cmd, 'cmdArgs:', cmdArgs)
