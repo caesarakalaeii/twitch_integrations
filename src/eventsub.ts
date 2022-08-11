@@ -14,6 +14,7 @@ import {
   ReverseProxyAdapterConfig,
 } from '@twurple/eventsub'
 import EventEmitter from 'events'
+import { EOL } from 'os'
 
 export type DirectAdapterConfig = {
   adapterType: 'direct'
@@ -103,6 +104,8 @@ export class CaesarEventSub {
       const sub = await fn()
       console.log('eventsub', name, 'initialized')
       this.subscriptions.set(name, sub)
+
+      console.log(`${EOL}test command for eventsub ${name}:${EOL}${await sub.getCliTestCommand()}${EOL}`)
     } catch (err) {
       console.error('failed to initialize sub', name, 'reason:', err)
     }
