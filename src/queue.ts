@@ -1,7 +1,7 @@
 type QueueItem = () => Promise<any>
 
 export class Queue {
-  private stack: QueueItem[]
+  private stack: QueueItem[] = []
 
   private run (item: QueueItem) {
     item()

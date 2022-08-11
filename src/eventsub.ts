@@ -1,5 +1,5 @@
 import { ApiClient } from '@twurple/api'
-import { AuthProvider, ClientCredentialsAuthProvider } from '@twurple/auth'
+import { ClientCredentialsAuthProvider } from '@twurple/auth'
 import { AuthServerConfig, AuthServer } from './authserver'
 import {
   ConnectionAdapter,
@@ -14,7 +14,10 @@ import {
   ReverseProxyAdapterConfig,
 } from '@twurple/eventsub'
 import EventEmitter from 'events'
-import { EOL } from 'os'
+import prompts from 'prompts'
+import stringArgv from 'string-argv'
+import yargs, { CommandModule } from 'yargs'
+import { spawn } from 'child_process'
 
 export type DirectAdapterConfig = {
   adapterType: 'direct'
@@ -104,8 +107,6 @@ export class CaesarEventSub {
       const sub = await fn()
       console.log('eventsub', name, 'initialized')
       this.subscriptions.set(name, sub)
-
-      console.log(`${EOL}test command for eventsub ${name}:${EOL}${await sub.getCliTestCommand()}${EOL}`)
     } catch (err) {
       console.error('failed to initialize sub', name, 'reason:', err)
     }
@@ -145,6 +146,69 @@ export class CaesarEventSub {
       console.log(e.userDisplayName, 'cheered', e.bits, 'with message:', e.message)
       this.event.emit(EventName.CHEER, e)
     }))
+
+    this.prompt()
+  }
+
+  private command(args: string[]) {
+    return new Promise<Record<string, any>>((resolve, reject) => {
+      let y = yargs()
+
+      y = y.scriptName('')
+
+      const subsListCommand:CommandModule<any, any> = {
+        command: 'list',
+        aliases: ['l', 'ls'],
+        describe: 'lists all available eventsubs',
+        handler: () => Array.from(this.subscriptions.keys()).forEach(arg => console.log(arg))
+      }
+
+      const subsTestCommand:CommandModule<any, any> = {
+        command: 'test <name>',
+        aliases: ['t'],
+        describe: 'executes a test command for the given eventsub',
+        builder: cmd => cmd
+          .positional('name', {
+            type: 'string'
+          }),
+        handler: async args => {
+          const sub = this.subscriptions.get(args.name)
+          const test = await sub.getCliTestCommand()
+          const [cmd, ...cmdArgs] = stringArgv(test)
+          console.log('cmd:', cmd, 'cmdArgs:', cmdArgs)
+          await new Promise<number>((resolve, reject) => {
+            const cp = spawn(cmd, cmdArgs, { stdio: 'inherit' })
+            cp.on('exit', code => resolve(code))
+            cp.on('error', err => reject(err))
+          })
+        }
+      }
+
+      const subsCommand:CommandModule<any, any> = {
+        command: 'subs',
+        describe: 'do stuff with eventsubs',
+        builder: cmd => cmd
+          .command(subsListCommand)
+          .command(subsTestCommand),
+        handler: () => {}
+      }
+      y = y.command(subsCommand)
+
+      y.parse(args, { }, (err, argv, output) => {
+        if (output) {
+          console.log(output)
+        }
+        if (err) return reject(err)
+        resolve (argv)
+      })
+    })
+  }
+
+  prompt () {
+    process.stdin.on('data', chunk => {
+      const args = stringArgv(chunk.toString())
+      this.command([...args, undefined])
+    })
   }
 
   async stop () {
