@@ -39,5 +39,6 @@ export class Arduino {
   async onFor (keyword: Keyword, time: number) {
     this.on(keyword)
     await wait(time)
+    this.off(keyword)
   }
 }
