@@ -18,6 +18,7 @@ import prompts from 'prompts'
 import stringArgv from 'string-argv'
 import yargs, { CommandModule } from 'yargs'
 import { spawn } from 'child_process'
+import _ from 'lodash'
 
 export type DirectAdapterConfig = {
   adapterType: 'direct'
@@ -156,6 +157,17 @@ export class CaesarEventSub {
 
       y = y.scriptName('')
 
+      const subsGetCommand:CommandModule<any, any> = {
+        command: 'get',
+        describe: 'shows the subscriptions',
+        handler: () => this.apiClient.eventSub.getSubscriptions()
+          .then(result => {
+            console.log(result.total, 'subscriptions:')
+            const ml = String(result.data.length).length
+            result.data.forEach((sub, i, arr) => console.log(String(i + 1).padStart(ml) + ':', _.pick(sub, ['type', 'status'])))
+          })
+      }
+
       const subsListCommand:CommandModule<any, any> = {
         command: 'list',
         aliases: ['l', 'ls'],
@@ -194,6 +206,7 @@ export class CaesarEventSub {
         aliases: ['eventsub', 'es', 's'],
         describe: 'do stuff with eventsubs',
         builder: cmd => cmd
+          .command(subsGetCommand)
           .command(subsListCommand)
           .command(subsTestCommand),
         handler: () => {}
