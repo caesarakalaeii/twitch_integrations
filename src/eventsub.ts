@@ -18,6 +18,7 @@ import prompts from 'prompts'
 import stringArgv from 'string-argv'
 import yargs, { CommandModule } from 'yargs'
 import { spawn } from 'child_process'
+import _ from 'lodash'
 
 export type DirectAdapterConfig = {
   adapterType: 'direct'
@@ -129,19 +130,19 @@ export class CaesarEventSub {
     .then(() => console.log('webhook for eventsubs is listening'))
     .catch(err => { console.log('listener failed to listen', err) })
 
-    this.handleSub('subs', () => this.listener.subscribeToChannelSubscriptionEvents({ id: this.userId }, e => {
+    this.handleSub('sub', () => this.listener.subscribeToChannelSubscriptionEvents({ id: this.userId }, e => {
       // do something when a subscription was received
       console.log(e.userDisplayName, 'subscribed with a tier', e.tier, 'subscription')
       this.event.emit(EventName.SUB, e)
     }))
 
-    this.handleSub('giftsubs', () => this.listener.subscribeToChannelSubscriptionGiftEvents({ id: this.userId }, e => {
+    this.handleSub('giftsub', () => this.listener.subscribeToChannelSubscriptionGiftEvents({ id: this.userId }, e => {
       // do something when a sub was gifted
       console.log(e.gifterDisplayName, 'gifted', e.amount || 1, 'tier', e.tier, 'subscriptions')
       this.event.emit(EventName.GIFTSUB, e)
     }))
 
-    this.handleSub('cheers', () => this.listener.subscribeToChannelCheerEvents({ id: this.userId }, e => {
+    this.handleSub('cheer', () => this.listener.subscribeToChannelCheerEvents({ id: this.userId }, e => {
       // do something when bits have been cheered
       console.log(e.userDisplayName, 'cheered', e.bits, 'with message:', e.message)
       this.event.emit(EventName.CHEER, e)
@@ -150,17 +151,29 @@ export class CaesarEventSub {
     this.prompt()
   }
 
-  private command(args: string[]) {
+  private command(arg: string[] | string) {
     return new Promise<Record<string, any>>((resolve, reject) => {
       let y = yargs()
 
       y = y.scriptName('')
 
+      const subsGetCommand:CommandModule<any, any> = {
+        command: 'get',
+        describe: 'shows the subscriptions',
+        handler: () => this.apiClient.eventSub.getSubscriptions()
+          .then(result => {
+            console.log(result.total, 'subscriptions:')
+            const ml = String(result.data.length).length
+            result.data.forEach((sub, i, arr) => console.log(String(i + 1).padStart(ml) + ':', _.pick(sub, ['type', 'status'])))
+          })
+      }
+
       const subsListCommand:CommandModule<any, any> = {
         command: 'list',
         aliases: ['l', 'ls'],
         describe: 'lists all available eventsubs',
-        handler: () => Array.from(this.subscriptions.keys()).forEach(arg => console.log(arg))
+        handler: () => Array.from(this.subscriptions.entries())
+          .forEach(([name, sub]) => console.log('-', name))
       }
 
       const subsTestCommand:CommandModule<any, any> = {
@@ -180,7 +193,6 @@ export class CaesarEventSub {
 
           const test = await sub.getCliTestCommand()
           const [cmd, ...cmdArgs] = stringArgv(test)
-          console.log('cmd:', cmd, 'cmdArgs:', cmdArgs)
           await new Promise<number>((resolve, reject) => {
             const cp = spawn(cmd, cmdArgs, { stdio: 'inherit' })
             cp.on('exit', code => resolve(code))
@@ -191,15 +203,17 @@ export class CaesarEventSub {
 
       const subsCommand:CommandModule<any, any> = {
         command: 'subs',
+        aliases: ['eventsub', 'es', 's'],
         describe: 'do stuff with eventsubs',
         builder: cmd => cmd
+          .command(subsGetCommand)
           .command(subsListCommand)
           .command(subsTestCommand),
         handler: () => {}
       }
       y = y.command(subsCommand)
 
-      y.parse(args, { }, (err, argv, output) => {
+      y.parse(arg, { }, (err, argv, output) => {
         if (output) {
           console.log(output)
         }
@@ -211,8 +225,9 @@ export class CaesarEventSub {
 
   prompt () {
     process.stdin.on('data', chunk => {
-      const args = stringArgv(chunk.toString())
-      this.command([...args, undefined])
+      // const args = stringArgv(chunk.toString())
+      // this.command([...args, undefined])
+      this.command(chunk.toString())
     })
   }
 
