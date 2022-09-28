@@ -9,6 +9,11 @@ import bodyParser from 'body-parser'
 import bcrypt from 'bcrypt'
 import compression from 'compression'
 
+type Credentials = {
+  username: string
+  password: string
+}
+
 export type Config = {
   eventSub: CaesarEventSubConfig
   relais?: RelaisConfig
@@ -21,10 +26,42 @@ export type Config = {
   api: {
     port: number
     hostname?: string
-    credentials: {
-      username: string
-      password: string
-    }[]
+    credentials?: Credentials[]
+  }
+}
+
+const createAuthMiddleware:{(creds: Credentials[]): Handler} = function (creds) {
+  return function (req, res, next) {
+    const authHeader = req.headers.authorization
+
+    if (!authHeader) {
+      return res.sendStatus(401)
+    }
+
+    const [method, data, ...rest] = authHeader.split(/\s/)
+
+    if (method.toLowerCase() !== 'basic') {
+      return res.sendStatus(401)
+    }
+
+    const [username, password] = Buffer.from(data, 'base64').toString().split(':')
+
+    const cred = creds.find(cred => cred.username === username)
+
+    bcrypt.compare(password, cred.password)
+      .then(result => {
+        if (result) {
+          next()
+        } else {
+          res.sendStatus(401)
+        }
+      })
+      .catch(err => {
+        console.error(err)
+        if (!res.headersSent) {
+          res.sendStatus(401)
+        }
+      })
   }
 }
 
@@ -58,40 +95,11 @@ export async function main () {
   })
   
   const app = express()
-  const authMiddleware:Handler = function (req, res, next) {
-    const authHeader = req.headers.authorization
 
-    if (!authHeader) {
-      return res.sendStatus(401)
-    }
-
-    const [method, data, ...rest] = authHeader.split(/\s/)
-
-    if (method.toLowerCase() !== 'basic') {
-      return res.sendStatus(401)
-    }
-
-    const [username, password] = Buffer.from(data, 'base64').toString().split(':')
-
-    const cred = config.api.credentials.find(cred => cred.username === username)
-
-    bcrypt.compare(password, cred.password)
-      .then(result => {
-        if (result) {
-          next()
-        } else {
-          res.sendStatus(401)
-        }
-      })
-      .catch(err => {
-        console.error(err)
-        if (!res.headersSent) {
-          res.sendStatus(401)
-        }
-      })
+  if (Array.isArray(config.api.credentials) && config.api.credentials.length) {
+    console.log('using auth middleware')
+    app.use(createAuthMiddleware(config.api.credentials))
   }
-
-  app.use(authMiddleware)
   app.use(compression())
   app.use(bodyParser.json())
 
