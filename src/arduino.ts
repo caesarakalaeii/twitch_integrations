@@ -3,7 +3,7 @@ import { SerialPort, SerialPortOpenOptions } from 'serialport'
 import { Queue } from './queue'
 import { wait } from './wait'
 
-export type Keyword = 'money' | 'tens'
+export type Keyword = 'money' | 'tens' | 'shockUp' | 'shockDown'
 
 export type ArduinoConfig = {
   serial: SerialPortOpenOptions<any>

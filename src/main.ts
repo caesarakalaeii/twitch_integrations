@@ -21,6 +21,7 @@ export type Config = {
   time: {
     sub: number
     bit: number
+    controll: number
   }
   minBits: number
   api: {
@@ -92,6 +93,14 @@ export async function main () {
       if (relais) queue.add(() => relais.onFor('relais', config.time.bit * e.bits))
       if (arduino) queue.add(() => arduino.onFor('money', config.time.bit * e.bits))
     }
+  })
+  esub.on(EventName.POINTSDOWN, e => {
+    if (relais) queue.add(() => relais.onFor('relais', config.time.controll))
+    if (arduino) queue.add(() => arduino.onFor('shockDown', config.time.controll))
+  })
+  esub.on(EventName.POINTSUP, e => {
+    if (relais) queue.add(() => relais.onFor('relais', config.time.controll))
+    if (arduino) queue.add(() => arduino.onFor('shockUp', config.time.controll))
   })
   
   const app = express()
