@@ -18,6 +18,7 @@ export type Config = {
   eventSub: CaesarEventSubConfig
   relais?: RelaisConfig
   arduino?: ArduinoConfig
+  tensstart?: number
   time: {
     sub: number
     bit: number
@@ -147,6 +148,9 @@ export async function main () {
     console.log('- keywords:', arduino.keywords)
     console.log('- commands', ['on', 'off', 'onfor'])
     console.log('the command \'onfor\' allows for query parameter \'t\' to give the time in ms')
+    if(config.tensstart){
+      console.log('Tens-Unit expected starting value is: ', config.tensstart)
+    }
   }
 
   app.listen(config.api.port, config.api.hostname, () => {
