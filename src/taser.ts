@@ -26,14 +26,14 @@ export class Taser {
   async increasePower () {
     if (this.power < this.config.power.max) {
       this.power++
-      this.event.emit('inc')
+      this.event.emit('inc', this.power)
     }
   }
 
   async decreasePower() {
     if (this.power > this.config.power.min) {
       this.power--
-      this.event.emit('dec')
+      this.event.emit('dec', this.power)
     }
   }
 }
