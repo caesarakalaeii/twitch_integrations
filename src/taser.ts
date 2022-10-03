@@ -1,6 +1,8 @@
 import EventEmitter from 'events';
+import { wait } from './wait';
 
 export type TaserConfig = {
+  delay: number
   power: {
     min: number
     max: number
@@ -24,8 +26,12 @@ export class Taser {
   }
 
   async increasePower () {
-    if (this.power < this.config.power.max) {
+    if (this.power < this.config.power.max) { 
       this.power++
+      this.event.emit('dec', this.power)  //taser uses safety feature to prevent accidental power increase, power down needed to circumvent
+      await wait(this.config.delay)
+      this.event.emit('inc', this.power)
+      await wait(this.config.delay)
       this.event.emit('inc', this.power)
     }
   }
