@@ -3,6 +3,7 @@ import { loadFile } from '@kounadev/loadfile'
 import { CaesarEventSubConfig } from '.'
 import { Relais, RelaisConfig } from './relais'
 import { Arduino, ArduinoConfig, Keyword } from './arduino'
+import { Taser, TaserConfig } from './taser'
 import { Queue } from './queue'
 import express, { Handler } from 'express'
 import bodyParser from 'body-parser'
@@ -18,11 +19,11 @@ export type Config = {
   eventSub: CaesarEventSubConfig
   relais?: RelaisConfig
   arduino?: ArduinoConfig
-  tensstart?: number
+  taser?: TaserConfig
   time: {
     sub: number
     bit: number
-    controll: number
+    control: number
   }
   minBits: number
   api: {
@@ -72,10 +73,24 @@ export async function main () {
   const esub = new CaesarEventSub(config.eventSub)
   let relais:Relais
   let arduino:Arduino
+  let taser:Taser
   const queue = new Queue()
   
   if (config.relais) relais = new Relais(config.relais)
   if (config.arduino) arduino = new Arduino(config.arduino)
+  if (config.taser) {
+    taser = new Taser(config.taser)
+      .on('dec', async (power) => {
+        if (arduino) await arduino.onFor('shockDown', config.time.control)
+        console.log('taser power has been decreased to power', power)
+      })
+      .on('inc', async (power) => {
+        if (arduino) await arduino.onFor('shockUp', config.time.control)
+        console.log('taser power has been increased to power', power)
+      })
+
+    console.log('taser config:', config.taser)
+  }
 
   esub.on(EventName.SUB, e => {
     if (!e.isGift) {
@@ -95,13 +110,13 @@ export async function main () {
       if (arduino) queue.add(() => arduino.onFor('money', config.time.bit * e.bits))
     }
   })
+
   esub.on(EventName.POINTSDOWN, e => {
-    if (relais) queue.add(() => relais.onFor('relais', config.time.controll))
-    if (arduino) queue.add(() => arduino.onFor('shockDown', config.time.controll))
+    if (taser) taser.decreasePower()
   })
+
   esub.on(EventName.POINTSUP, e => {
-    if (relais) queue.add(() => relais.onFor('relais', config.time.controll))
-    if (arduino) queue.add(() => arduino.onFor('shockUp', config.time.controll))
+    if (taser) taser.increasePower()
   })
   
   const app = express()
@@ -148,9 +163,6 @@ export async function main () {
     console.log('- keywords:', arduino.keywords)
     console.log('- commands', ['on', 'off', 'onfor'])
     console.log('the command \'onfor\' allows for query parameter \'t\' to give the time in ms')
-    if(config.tensstart){
-      console.log('Tens-Unit expected starting value is: ', config.tensstart)
-    }
   }
 
   app.listen(config.api.port, config.api.hostname, () => {

@@ -58,7 +58,6 @@ export type Config = {
   userAuth: AuthServerConfig
   upId: string
   downId :string
-  tensstart: number
 } & AdapterConfig
 
 export enum EventName {
@@ -79,14 +78,13 @@ export class CaesarEventSub {
   private userId: string
   private downId : string
   private upId: string
-  private tensPower: number
 
   constructor (private config: Config) {
     this.appAuth = new ClientCredentialsAuthProvider(this.config.appAuth.clientId, this.config.appAuth.clientSecret, this.config.appAuth.impliedScopes)
     this.userAuth = new AuthServer(this.config.userAuth)
     this.upId = this.config.upId
     this.downId = this.config.downId
-    this.tensPower = this.config.tensstart.valueOf()
+
     this.apiClient = new ApiClient({
       authProvider: this.appAuth
     })
@@ -163,16 +161,12 @@ export class CaesarEventSub {
     }))
 
     this.handleSub('pointsDown', () => this.listener.subscribeToChannelRedemptionAddEventsForReward({id: this.userId}, this.downId, e => {
-      this.tensPower--
       console.log(e.userDisplayName, 'redeemed Power Down with this message:', e.input)
-      console.log('Power is now', this.tensPower)
       this.event.emit(EventName.POINTSDOWN, e)
     }))
 
     this.handleSub('pointsUp', () => this.listener.subscribeToChannelRedemptionAddEventsForReward({id: this.userId}, this.upId, e => {
-      this.tensPower++
       console.log(e.userDisplayName, 'redeemed Power Up with this message:', e.input)
-      console.log('Power is now', this.tensPower)
       this.event.emit(EventName.POINTSUP, e)
     }))
 

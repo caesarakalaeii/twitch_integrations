@@ -9,6 +9,7 @@ export type ArduinoConfig = {
   serial: SerialPortOpenOptions<any>
   action: Record<Keyword, number>
   log?: boolean
+  pulseTime?: number
 }
 
 export class Arduino {
