@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { CheerEvent, GiftEvent, StreamEvents, UserEvent } from './event_collector';
-import { testMessages, testUsernames } from './test_vars';
+import { long_message, testMessages, testUsernames } from './test_vars';
 import ejs from 'ejs';
 
 async function saveToFile(filename: string, streamEvents: StreamEvents){
@@ -46,6 +46,7 @@ for(let i = 0; i<max; i++){
       amount: Math.floor(Math.random()*100),
       messages: [message]
     }
+    cheerEvent.messages.push[long_message]
     for (let i = 1; i< Math.floor(Math.random()*5); i++){
       cheerEvent.messages.push(testMessages[Math.floor(Math.random()*(testMessages.length-1))])
     }
