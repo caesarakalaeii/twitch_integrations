@@ -225,16 +225,18 @@ export class CaesarEventSub {
     return await this.apiClient.subscriptions.getSubscriptionsPaginated({ id: this.userId }).getAll()
   }
 
-  async getClips (useTime?: boolean) {
+  async getClips (useTime?: boolean | Date) {
     const clipFilter: HelixClipFilter = useTime
       ? {
-          startDate: this.start.toISOString(),
+          startDate: typeof useTime === 'boolean'
+            ? this.start.toISOString()
+            : useTime.toISOString(),
           endDate: new Date().toISOString()
         }
       : undefined
 
     return await this.apiClient.clips
-      .getClipsForBroadcasterPaginated({ id: this.config.user }, clipFilter)
+      .getClipsForBroadcasterPaginated({ id: this.userId }, clipFilter)
       .getAll()
       .then((clips) => clips.map(clip => ({ url: clip.embedUrl })))
   }

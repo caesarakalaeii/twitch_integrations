@@ -1,6 +1,6 @@
 import path from 'path'
 import { CheerEvent, GiftEvent, RaidEvent, StreamEvents, UserEvent } from './event_collector'
-import { longMessage, testMessages, testUsernames } from './test_vars'
+import { testMessages, testUsernames } from './test_vars'
 import express from 'express'
 import { lookup } from 'mime-types'
 
@@ -36,7 +36,7 @@ function mockEvents () {
       const cheerEvent :CheerEvent = {
         user: name,
         amount: Math.floor(Math.random() * 100),
-        messages: [longMessage]
+        messages: [message]
       }
       for (let i = 1; i < Math.floor(Math.random() * 5); i++) {
         cheerEvent.messages.push(testMessages[Math.floor(Math.random() * (testMessages.length - 1))])
@@ -58,6 +58,20 @@ function mockEvents () {
       events.redeems.push(userEvent)
     }
   }
+  events.clips = [
+    {
+      url: 'https://clips.twitch.tv/embed?clip=AnimatedOddKleeWoofer-D_ga_NkwKzPXPuyz'
+    },
+    {
+      url: 'https://clips.twitch.tv/embed?clip=BreakableDreamyFloofKappaClaus-oymvKUiue9Sqs1_7'
+    },
+    {
+      url: 'https://clips.twitch.tv/embed?clip=ThankfulShakingClintKreygasm-fyV_XrFDEIIIN6Yt'
+    },
+    {
+      url: 'https://clips.twitch.tv/embed?clip=CredulousPoisedLEDTwitchRPG-CtTa4-g8wcCbMgdj'
+    }
+  ]
 
   return events
 }
