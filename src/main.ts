@@ -39,6 +39,7 @@ export type Config = {
     follows: boolean, 
     cheers: boolean,
     currentSubs: boolean,
+    raids: boolean,
     redeemId: string
   }
 }
@@ -146,6 +147,10 @@ export async function main () {
 
   esub.on(EventName.FOLLOW, e =>{
     if(config.credits.follows) queue.add(() => eventCollector.addFollow(e))
+  })
+
+  esub.on(EventName.RAID, e =>{
+    if(config.credits.raids) queue.add(() => eventCollector.addRaid(e))
   })
   
   const app = express()

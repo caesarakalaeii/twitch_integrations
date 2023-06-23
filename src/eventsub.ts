@@ -7,6 +7,7 @@ import {
   DirectConnectionAdapterConfig,
   EventSubChannelCheerEvent,
   EventSubChannelFollowEvent,
+  EventSubChannelRaidEvent,
   EventSubChannelSubscriptionEvent,
   EventSubChannelSubscriptionGiftEvent,
   EventSubListener,
@@ -70,7 +71,8 @@ export enum EventName {
   POINTSUP = 'pointsUp',
   POINTSDOWN = 'pointsDown',
   REDEEM = 'redeem',
-  FOLLOW = 'follow'
+  FOLLOW = 'follow',
+  RAID = 'raid'
 }
 
 export class CaesarEventSub {
@@ -120,9 +122,12 @@ export class CaesarEventSub {
   on (event: EventName.POINTSDOWN, listener: (event: EventSubChannelRedemptionAddEvent) => any) :void
   on (event: EventName.REDEEM, listener: (event: EventSubChannelRedemptionAddEvent) => any) :void
   on (event: EventName.FOLLOW, listener: (event: EventSubChannelFollowEvent) => any) :void
+  on (event: EventName.RAID, listener: (event: EventSubChannelRaidEvent) => any) :void
   on (event: EventName, listener: (...args: any[]) => any) {
     this.event.on(event, listener)
   }
+
+
 
   private async handleSub (name: string, fn: () => Promise<EventSubSubscription>) {
     try {
@@ -187,6 +192,11 @@ export class CaesarEventSub {
     this.handleSub('follow', () => this.listener.subscribeToChannelFollowEvents({id: this.userId}, e => {
       console.log(e.userDisplayName, 'followed')
       this.event.emit(EventName.FOLLOW, e)
+    }))
+
+    this.handleSub('raid', () => this.listener.subscribeToChannelRaidEventsFrom({id: this.userId}, e =>{
+      console.log(e.raidingBroadcasterDisplayName, 'raided with: ', e.viewers)
+      this.event.emit(EventName.RAID, e)
     }))
 
     this.prompt()
