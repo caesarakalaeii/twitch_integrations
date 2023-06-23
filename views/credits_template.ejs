@@ -1,24 +1,37 @@
-|<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Credits</title>
   <link rel="stylesheet" href="/content/style.css" />
+  <noscript>
+    <% let msg = 0; %>
+    <% function oddEven() { return msg++ % 2 ? 'odd' : 'even' }; %>
+  </noscript>
+  <script>
+    function pageScroll() {
+      window.scrollBy(0,1);
+      scrolldelay = setTimeout(pageScroll,10);
+    }
+    window.addEventListener('DOMContentLoaded', function() {
+      pageScroll()
+    })
+  </script>
 </head>
 
 <body>
-  <div class="header">Thanks for watching!</div>
+  <div class="header rainbow">Thanks for watching!</div>
 
-  <% if (newSubs?.length){%>
+  <% if (newSubs?.length) { %>
   <div class="list_title">Gifted Subs:</div>
-  <div class="list_container">
-    <% gifted.forEach(function(event) { %>
-      <div class="list_item">
+  <div class="list_container ranking">
+    <% gifted.sort((a, b) => b.amount - a.amount).forEach(function(event) { %>
+      <div class="list_item message <%= oddEven() %>">
         <span class="username">
           <%= event.user %>
-        </span> -
-        <span class="message">
+        </span>
+        <span class="amount">
           <%= event.amount %>
         </span>
       </div>
@@ -28,9 +41,9 @@
 
   <% if (newSubs?.length){%>
   <div class="list_title">New Subscriptions:</div>
-  <div class="list_container">
+  <div class="list_container" id="new_subs">
     <% newSubs.forEach(function(event) { %>
-      <div class="list_item">
+      <div class="list_item message <%= oddEven() %>">
         <span class="username">
           <%= event %>
         </span>
@@ -51,14 +64,14 @@
   <% if (cheers?.length){%>
   <div class="list_title">Cheers:</div>
   <div class="list_container">
-    <% cheers.forEach(function(event) { %>
+    <% cheers.sort((a, b) => b.amount - a.amount).forEach(function(event) { %>
       <div class="list_item">
         <img class="inline-icon" src="/content/diamond.png">
         <span class="amount"><%= event.amount %></span>
         <span class="username"><%= event.user %></span>
         <div class="vert_container">
           <% event.messages.forEach(function(m) { %>
-            <span class="message"><%= m %></span>
+            <div class="message <%= oddEven() %>"><%= m %></div>
           <% }) %>
         </div>
       </div>
@@ -73,8 +86,8 @@
       <div class="list_item">
         <span class="username">
           <%= event.user %>
-        </span> -
-        <span class="message">
+        </span>
+        <span class="message <%= oddEven() %>">
           <%= event.message %>
         </span>
       </div>
@@ -93,7 +106,7 @@
     </p>
   <% } %>
 
-  <div class="closure">Sweet dreams of sour pickles</div>
+  <div class="closure rainbow">Sweet dreams of sour pickles</div>
 </body>
 
 </html>

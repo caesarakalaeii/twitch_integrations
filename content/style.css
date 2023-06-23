@@ -1,9 +1,20 @@
 /* Font styles */
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Source+Code+Pro&display=swap');
+
+:root {
+  --twitch-purple: #6441a5;
+}
 
 body {
   font-family: 'Roboto', sans-serif;
+  text-shadow:
+    1px -1px 1px black,
+   -1px  1px 1px black,
+   -1px -1px 1px black,
+    1px  1px 1px black,
+    2px  3px 1px black;
 }
 
 .header,
@@ -12,12 +23,28 @@ body {
   font-family: 'Comfortaa', cursive;
 }
 
+@keyframes rainbow {
+  from {
+    filter: hue-rotate(0deg) brightness(150%);
+  }
+  to {
+    filter: hue-rotate(360deg) brightness(100%);
+  }
+}
+
+.rainbow {
+  color: hsl(0deg, 69%, 69%);
+  animation-name: rainbow;
+  animation-duration: 7s;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+
 /*Rest of the styles*/
 .header {
   font-size: 40px;
   font-weight: bold;
   color: blue;
-  padding-bottom: 100px;
 }
 
 .closure {
@@ -27,17 +54,43 @@ body {
   padding-top: 100px;
 }
 
+.amount {
+  font-family: 'Source Code Pro';
+  font-size: 1.25em;
+  min-width: 100px;
+  text-align: center;
+}
+
 .username {
-  font-size: 25px;
+  font-size: 1.1em;
   font-weight: bold;
-  color: purple;
+  font-family: 'Comfortaa';
+  min-width: 256px;
 }
 
 .message {
   word-wrap: break-word;
   font-size: 22px;
+  max-width: 50vw;
+  text-justify: distribute;
+}
+
+.message.odd {
   color: white;
-  max-width: 400px;
+  text-shadow:
+     1px -1px 1px black,
+    -1px  1px 1px black,
+    -1px -1px 1px black,
+     1px  1px 1px black;
+}
+
+.message.even {
+  color: white;
+  text-shadow:
+     1px -1px 1px var(--twitch-purple),
+    -1px  1px 1px var(--twitch-purple),
+    -1px -1px 1px var(--twitch-purple),
+     1px  1px 1px var(--twitch-purple);
 }
 
 /* Flexbox styles */
@@ -45,36 +98,63 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background-color: rgba(0, 0, 0, 100);
+  /* background-color: rgba(0, 0, 0, 100); */
+  background-color: #333;
+  /* background-image: url('https://go.kouna.io/-/X8LcEK0I'); */
+  background-attachment: fixed;
+  background-position: 50% 50%;
 }
 
 .list_title {
-  padding-bottom: 50px;
-  padding-top: 50px;
-  text-decoration: underline;
+  margin: 50vh 0 1em 0;
+  padding: .5em 0;
   font-size: 35px;
   color: white;
-}
-
-.list_container {
-  list-style-type: none;
-  font-size: 22px;
-  color: white;
-  padding: 0;
-  margin: 0;
+  width: 100%;
+  text-align: center;
+  backdrop-filter: blur(8px);
+  border-radius: 4px;
 }
 
 .vert_container {
   display: flex;
   flex-flow: column nowrap;
+  gap: 8px;
+}
+
+.list_item > .vert_container {
+  flex: 1 1 auto;
+}
+
+.list_container {
+  display: flex;
+  flex-direction: column;
+  list-style-type: none;
+  font-size: 22px;
+  color: white;
+  gap: 12px;
 }
 
 .list_item {
-  color: white;
+  flex: 0 1 auto;
   display: flex;
+  flex-flow: row nowrap;
+  color: white;
   justify-content: center;
   align-items: center;
-  margin-bottom: 10px;
+  justify-content: stretch;
+  padding: 4px 8px;
+  border-radius: 4px;
+
+  backdrop-filter: blur(8px);
+}
+
+.list_item:nth-child(odd) {
+  background-color: rgba(0,0,0,.05);
+}
+
+.list_item:nth-child(even) {
+  background-color: rgba(255,255,255,.05);
 }
 
 p.list_no_break {
@@ -88,18 +168,30 @@ span.comma_separated:not(:last-child)::after {
   content: ', ';
 }
 
-.list_item .username {
-  margin-right: 10px;
-}
-.list_item_no_break .username {
-  margin-right: 0px;
-}
-
-.list_item .message {
-  margin-left: 10px;
-}
-
 .inline-icon {
   display: inline-block;
   height: 1.25em;
+}
+
+@keyframes wiggle {
+  from {
+    transform: translate(25%, -69%) rotate(33deg);
+  }
+  to {
+    transform: translate(25%, -69%) rotate(45deg);
+  }
+}
+
+.ranking > :first-child .amount::after {
+  content: '👑';
+  position: absolute;
+  right: 0;
+  font-size: 2em;
+  top: 0;
+  transform: translate(25%, -69%) rotate(33deg);
+  animation: wiggle .2s ease-in-out infinite alternate;
+}
+
+#new_subs .username {
+  text-align: center;
 }

@@ -1,3 +1,4 @@
+import { HelixClip } from "@twurple/api"
 import { EventSubChannelCheerEvent, EventSubChannelSubscriptionGiftEvent,EventSubChannelRedemptionAddEvent, EventSubChannelSubscriptionEvent, EventSubChannelFollowEvent } from "@twurple/eventsub"
 
 
@@ -22,6 +23,7 @@ export interface StreamEvents{
   cheers: CheerEvent[]
   redeems: UserEvent[]
   follows: string[]
+  clips?: { url: string }[]
 }
 
 export class EventCollector implements StreamEvents {

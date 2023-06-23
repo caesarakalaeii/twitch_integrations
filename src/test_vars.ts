@@ -231,7 +231,6 @@ export const testMessages: string[] = [
     "Hopping on one foot while eating spaghetti",
     "When elephants learn to dance ballet",
     "Swimming with dolphins in a bathtub",
-    "The magical powers of a talking tree, Practicing yoga with a herd of elephants, When clouds learn to play hide and seek, Baking a cake in the shape of a smile, The monkey wears a tuxedo to the beach",
     "The art of balancing spoons on your nose",
     "Knitting sweaters for giraffes",
     "Baking cookies in the shape of planets",
@@ -270,3 +269,5 @@ export const testMessages: string[] = [
     "When clouds learn to play hide and seek",
     "Baking a cake in the shape of a smile"
 ]
+
+export const long_message = "The magical powers of a talking tree, Practicing yoga with a herd of elephants, When clouds learn to play hide and seek, Baking a cake in the shape of a smile, The monkey wears a tuxedo to the beach"

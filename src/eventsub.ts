@@ -10,6 +10,7 @@ import {
   EventSubChannelSubscriptionEvent,
   EventSubChannelSubscriptionGiftEvent,
   EventSubListener,
+  EventSubStreamOnlineEvent,
   EventSubSubscription,
   ReverseProxyAdapter,
   ReverseProxyAdapterConfig,
@@ -70,7 +71,8 @@ export enum EventName {
   POINTSUP = 'pointsUp',
   POINTSDOWN = 'pointsDown',
   REDEEM = 'redeem',
-  FOLLOW = 'follow'
+  FOLLOW = 'follow',
+  LIVE = 'live',
 }
 
 export class CaesarEventSub {
@@ -84,6 +86,7 @@ export class CaesarEventSub {
   private downId : string
   private upId: string
   private redeemId: string
+  private start = new Date()
 
   constructor (private config: Config) {
     this.appAuth = new ClientCredentialsAuthProvider(this.config.appAuth.clientId, this.config.appAuth.clientSecret, this.config.appAuth.impliedScopes)
@@ -111,15 +114,23 @@ export class CaesarEventSub {
     })
   }
 
+  async getClips(useTime?: boolean) {
+    return await this.apiClient.clips.getClipsForBroadcasterPaginated(this.config.user, useTime ? {
+      startDate: this.start.toISOString(),
+      endDate: new Date().toISOString()
+    }: undefined).getAll().then((clips) => clips.map(clip => ({ url: clip.embedUrl })))
+  }
+
   private subscriptions:Map<string, EventSubSubscription> = new Map()
 
   on (event: EventName.GIFTSUB, listener: (event: EventSubChannelSubscriptionGiftEvent) => any): void
   on (event: EventName.SUB, listener: (event: EventSubChannelSubscriptionEvent) => any): void
   on (event: EventName.CHEER, listener: (event: EventSubChannelCheerEvent) => any): void
-  on (event: EventName.POINTSUP, listener: (event: EventSubChannelRedemptionAddEvent) => any) :void
-  on (event: EventName.POINTSDOWN, listener: (event: EventSubChannelRedemptionAddEvent) => any) :void
-  on (event: EventName.REDEEM, listener: (event: EventSubChannelRedemptionAddEvent) => any) :void
-  on (event: EventName.FOLLOW, listener: (event: EventSubChannelFollowEvent) => any) :void
+  on (event: EventName.POINTSUP, listener: (event: EventSubChannelRedemptionAddEvent) => any): void
+  on (event: EventName.POINTSDOWN, listener: (event: EventSubChannelRedemptionAddEvent) => any): void
+  on (event: EventName.REDEEM, listener: (event: EventSubChannelRedemptionAddEvent) => any): void
+  on (event: EventName.FOLLOW, listener: (event: EventSubChannelFollowEvent) => any): void
+  on (event: EventName.LIVE, listener: (event: EventSubStreamOnlineEvent) => any): void
   on (event: EventName, listener: (...args: any[]) => any) {
     this.event.on(event, listener)
   }

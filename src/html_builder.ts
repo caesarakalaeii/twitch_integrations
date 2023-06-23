@@ -1,18 +1,8 @@
-import fs from 'fs';
 import path from 'path';
 import { CheerEvent, GiftEvent, StreamEvents, UserEvent } from './event_collector';
-import { testMessages, testUsernames } from './test_vars';
-import ejs from 'ejs';
+import { long_message, testMessages, testUsernames } from './test_vars';
 import express from 'express';
 import { lookup } from 'mime-types';
-
-async function saveToFile(filename: string, streamEvents: StreamEvents){
-  const data = await fs.promises.readFile(path.join(__dirname, "../views/credits_template.html"))
-  const html = ejs.render(data.toString(), streamEvents);;
-  await fs.promises.writeFile(filename, html)
-  console.log('HTML file saved successfully!');
-      
-}
 
 // Example usage
 function mockEvents() {
@@ -23,6 +13,7 @@ function mockEvents() {
     cheers: [],
     redeems: [],
     follows: [],
+    clips: []
   };
   const max = 60
   for(let i = 0; i<max; i++){
@@ -46,7 +37,7 @@ function mockEvents() {
       const cheerEvent :CheerEvent ={
         user: name,
         amount: Math.floor(Math.random()*100),
-        messages: [message]
+        messages: [long_message]
       }
       for (let i = 1; i< Math.floor(Math.random()*5); i++){
         cheerEvent.messages.push(testMessages[Math.floor(Math.random()*(testMessages.length-1))])
