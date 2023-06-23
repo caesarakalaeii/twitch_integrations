@@ -72,6 +72,10 @@ for(let i = 0; i<max; i++){
   else{
   events.redeems.push(userEvent)
   }
+
+  async setAllSubs(){
+    
+  }
   
 }
   

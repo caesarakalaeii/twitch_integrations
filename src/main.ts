@@ -79,6 +79,8 @@ const createAuthMiddleware:{(creds: Credentials[]): Handler} = function (creds) 
   }
 }
 
+
+
 export async function main () {
   const config = await loadFile<Config>('config.js')
   const esub = new CaesarEventSub(config.eventSub)

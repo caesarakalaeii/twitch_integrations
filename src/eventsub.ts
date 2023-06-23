@@ -139,6 +139,8 @@ export class CaesarEventSub {
     }
   }
 
+  
+
   async init () {
     await this.userAuth.getAccessToken()
     console.log('user token received')
@@ -199,7 +201,19 @@ export class CaesarEventSub {
       this.event.emit(EventName.RAID, e)
     }))
 
+    
+
     this.prompt()
+  }
+
+  async getSubscriptions() {
+    await this.apiClient.subscriptions.getSubscriptionsPaginated(this.config.user)
+    .getAll()
+    .then((subs) => {
+      return subs
+    }
+    )
+    
   }
 
   private command(arg: string[] | string) {
