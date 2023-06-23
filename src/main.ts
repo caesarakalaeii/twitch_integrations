@@ -9,8 +9,7 @@ import express, { Handler } from 'express'
 import bodyParser from 'body-parser'
 import bcrypt from 'bcrypt'
 import compression from 'compression'
-import { EventCollector, GiftEvent, UserEvent } from './event_collector'
-import { messages } from './test_vars'
+import { CheerEvent, EventCollector, GiftEvent, UserEvent } from './event_collector'
 
 type Credentials = {
   username: string
@@ -113,7 +112,7 @@ export async function main () {
     if (!e.isGift) {
       if (relais) queue.add(() => relais.onFor('relais', config.time.sub))
       if (arduino) queue.add(() => arduino.onFor('money', config.time.sub))
-      if (config.credits.newSubs) queue.add(() => eventCollector.addNewSub(e.userDisplayName))
+      if (config.credits.newSubs) queue.add(() => eventCollector.addNewSub(e))
       
     }
   })
@@ -121,26 +120,15 @@ export async function main () {
   esub.on(EventName.GIFTSUB, e => {
     if (relais) queue.add(() => relais.onFor('relais', config.time.sub * e.amount))
     if (arduino) queue.add(() => arduino.onFor('money', config.time.sub * e.amount))
-    if (config.credits.gifts){
-      var giftEvent : GiftEvent = {
-        user: e.gifterDisplayName,
-        amount: e.amount
-      }
-      queue.add(() => eventCollector.addGifted(giftEvent))
-    }
+    if (config.credits.gifts)queue.add(() => eventCollector.addGifted(e))
   })
 
   esub.on(EventName.CHEER, e => {
     if (e.bits >= config.minBits) {
       if (relais) queue.add(() => relais.onFor('relais', config.time.bit * e.bits))
       if (arduino) queue.add(() => arduino.onFor('money', config.time.bit * e.bits))
-      if (config.credits.cheers){
-        var userEvent : UserEvent = {
-          user: e.userDisplayName,
-          message: e.message
-        }
-        queue.add(() => eventCollector.addCheer(userEvent))
-      }
+      if (config.credits.cheers) queue.add(() => eventCollector.addCheer(e))
+      
     }
   })
 
@@ -153,13 +141,11 @@ export async function main () {
   })
 
   esub.on(EventName.REDEEM, e => {
-    if (config.credits.redeems) {
-      var userEvent : UserEvent = {
-        user: e.userDisplayName,
-        message: e.input
-      }
-      queue.add(() => eventCollector.addRedeem(userEvent))
-    }
+    if (config.credits.redeems)queue.add(() => eventCollector.addRedeem(e))
+  })
+
+  esub.on(EventName.FOLLOW, e =>{
+    if(config.credits.follows) queue.add(() => eventCollector.addFollow(e))
   })
   
   const app = express()

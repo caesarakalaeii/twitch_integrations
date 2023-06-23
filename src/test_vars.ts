@@ -1,4 +1,4 @@
-export const usernames: string[] = [
+export const testUsernames: string[] = [
     "pinchethnic",
     "truffleyearning",
     "safedumbass",
@@ -200,7 +200,7 @@ export const usernames: string[] = [
     "hymnsing",
     "proteinjellied"
 ]
-export const messages: string[] = [
+export const testMessages: string[] = [
     "The purple elephant dances on Tuesdays",
     "Singing in the rain with a toaster",
     "Writing love letters to a friendly ghost",

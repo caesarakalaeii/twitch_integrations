@@ -1,4 +1,3 @@
-export const htmlString = `
 <!DOCTYPE html>
 <html>
   <head>
@@ -97,7 +96,7 @@ export const htmlString = `
       <% gifted.forEach(function(event) { %>
         <div class = "list_item">
           <span class="username"><%= event.user %></span> -
-          <span class="message"><%= event.message %></span>
+          <span class="message"><%= event.amount %></span>
         </div>
       <% }) %>
     </div>
@@ -124,7 +123,11 @@ export const htmlString = `
       <% cheers.forEach(function(event) { %>
         <div class = "list_item">
           <span class="username"><%= event.user %></span> -
-          <span class="message"><%= event.message %></span>
+          <div class="vert_container">
+          <% event.messages.forEach(function(m) { %>
+          <span class="message"><%= m %></span>
+          <% }) %>
+          </div>
         </div>
       <% }) %>
     </div>
@@ -148,6 +151,3 @@ export const htmlString = `
     <div class = "closure">Sweet dreams of sour pickles</div>
   </body>
 </html>
-
-
-`
