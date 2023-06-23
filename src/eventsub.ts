@@ -19,10 +19,9 @@ import {
 import { spawn } from 'child_process'
 import EventEmitter from 'events'
 import _ from 'lodash'
-import stringArgv from 'string-argv'
-import yargs, { CommandModule } from 'yargs'
-import { AuthServer, AuthServerConfig } from './authserver'
 import { EOL } from 'os'
+import stringArgv from 'string-argv'
+import { AuthServer, AuthServerConfig } from './authserver'
 
 export type DirectAdapterConfig = {
   adapterType: 'direct'
@@ -114,19 +113,6 @@ export class CaesarEventSub {
       apiClient: this.apiClient,
       secret: this.config.secret
     })
-  }
-
-  async getClips (useTime?: boolean) {
-    const clipFilter: HelixClipFilter = useTime
-      ? {
-          startDate: this.start.toISOString(),
-          endDate: new Date().toISOString()
-        }
-      : undefined
-    return await this.apiClient.clips
-      .getClipsForBroadcasterPaginated(this.config.user, clipFilter)
-      .getAll()
-      .then((clips) => clips.map(clip => ({ url: clip.embedUrl })))
   }
 
   private subscriptions:Map<string, EventSubSubscription> = new Map()
@@ -228,10 +214,34 @@ export class CaesarEventSub {
       console.log(e.raidingBroadcasterDisplayName, 'raided with: ', e.viewers)
       this.event.emit(EventName.RAID, e)
     }))
+
+    this.handleSub(EventName.LIVE, () => this.listener.subscribeToStreamOnlineEvents({ id: this.userId }, e => {
+      console.log(e.broadcasterDisplayName, 'went live ')
+      this.event.emit(EventName.LIVE, e)
+    }))
   }
 
   async getSubscriptions () {
-    return await this.apiClient.subscriptions.getSubscriptionsPaginated(this.config.user).getAll()
+    return await this.apiClient.subscriptions.getSubscriptionsPaginated({ id: this.userId }).getAll()
+  }
+
+  async getClips (useTime?: boolean) {
+    const clipFilter: HelixClipFilter = useTime
+      ? {
+          startDate: this.start.toISOString(),
+          endDate: new Date().toISOString()
+        }
+      : undefined
+
+    return await this.apiClient.clips
+      .getClipsForBroadcasterPaginated({ id: this.config.user }, clipFilter)
+      .getAll()
+      .then((clips) => clips.map(clip => ({ url: clip.embedUrl })))
+  }
+
+  listEventSubs () {
+    Array.from(this.subscriptions.entries())
+      .forEach(([name]) => console.log('-', name))
   }
 
   async getEventSubs () {
@@ -241,11 +251,6 @@ export class CaesarEventSub {
         const ml = String(result.data.length).length
         result.data.forEach((sub, i) => console.log(String(i + 1).padStart(ml) + ':', _.pick(sub, ['type', 'status'])))
       })
-  }
-
-  listEventSubs () {
-    Array.from(this.subscriptions.entries())
-      .forEach(([name]) => console.log('-', name))
   }
 
   async testSub (name: string) {
@@ -269,7 +274,7 @@ export class CaesarEventSub {
       await sub.stop()
       console.log('eventsub', name, 'stopped')
     }
-    await this.listener.unlisten()
+    await this.listener.stop()
     console.log('stopped listening')
   }
 }

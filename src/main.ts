@@ -37,6 +37,7 @@ export type Config = {
     credentials?: Credentials[]
   }
   credits: Partial<{
+    clips: boolean,
     newSubs: boolean,
     gifts: boolean,
     redeems: boolean,
@@ -228,6 +229,10 @@ export async function main () {
 
   esub.on(EventName.RAID, e => {
     if (config?.credits?.raids) queue.add(() => eventCollector.addRaid(e))
+  })
+
+  esub.on(EventName.LIVE, e => {
+    if (config.credits.clips) queue.add(() => esub.getSubscriptions().then((subs) => eventCollector.addAllSubs(subs)))
   })
 
   if (config.api) {
