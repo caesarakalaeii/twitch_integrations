@@ -6,6 +6,7 @@ import {
   DirectConnectionAdapter,
   DirectConnectionAdapterConfig,
   EventSubChannelCheerEvent,
+  EventSubChannelFollowEvent,
   EventSubChannelSubscriptionEvent,
   EventSubChannelSubscriptionGiftEvent,
   EventSubListener,
@@ -20,6 +21,7 @@ import yargs, { CommandModule } from 'yargs'
 import { spawn } from 'child_process'
 import _ from 'lodash'
 import { EventSubChannelRedemptionAddEvent, EventSubChannelRedemptionAddEventData } from '@twurple/eventsub/lib/events/EventSubChannelRedemptionAddEvent'
+import { EventSubChannelFollowEventData } from '@twurple/eventsub/lib/events/EventSubChannelFollowEvent'
 
 export type DirectAdapterConfig = {
   adapterType: 'direct'
@@ -58,6 +60,7 @@ export type Config = {
   userAuth: AuthServerConfig
   upId: string
   downId :string
+  redeemId: string
 } & AdapterConfig
 
 export enum EventName {
@@ -65,7 +68,9 @@ export enum EventName {
   CHEER = 'cheer',
   GIFTSUB = 'giftsub',
   POINTSUP = 'pointsUp',
-  POINTSDOWN = 'pointsDown'
+  POINTSDOWN = 'pointsDown',
+  REDEEM = 'redeem',
+  FOLLOW = 'follow'
 }
 
 export class CaesarEventSub {
@@ -78,12 +83,14 @@ export class CaesarEventSub {
   private userId: string
   private downId : string
   private upId: string
+  private redeemId: string
 
   constructor (private config: Config) {
     this.appAuth = new ClientCredentialsAuthProvider(this.config.appAuth.clientId, this.config.appAuth.clientSecret, this.config.appAuth.impliedScopes)
     this.userAuth = new AuthServer(this.config.userAuth)
     this.upId = this.config.upId
     this.downId = this.config.downId
+    this.redeemId = this.config.redeemId
 
     this.apiClient = new ApiClient({
       authProvider: this.appAuth
@@ -111,6 +118,8 @@ export class CaesarEventSub {
   on (event: EventName.CHEER, listener: (event: EventSubChannelCheerEvent) => any): void
   on (event: EventName.POINTSUP, listener: (event: EventSubChannelRedemptionAddEvent) => any) :void
   on (event: EventName.POINTSDOWN, listener: (event: EventSubChannelRedemptionAddEvent) => any) :void
+  on (event: EventName.REDEEM, listener: (event: EventSubChannelRedemptionAddEvent) => any) :void
+  on (event: EventName.FOLLOW, listener: (event: EventSubChannelFollowEvent) => any) :void
   on (event: EventName, listener: (...args: any[]) => any) {
     this.event.on(event, listener)
   }
@@ -168,6 +177,16 @@ export class CaesarEventSub {
     this.handleSub('pointsUp', () => this.listener.subscribeToChannelRedemptionAddEventsForReward({id: this.userId}, this.upId, e => {
       console.log(e.userDisplayName, 'redeemed Power Up with this message:', e.input)
       this.event.emit(EventName.POINTSUP, e)
+    }))
+
+    this.handleSub('redeem', () => this.listener.subscribeToChannelRedemptionAddEventsForReward({id: this.userId}, this.redeemId, e => {
+      console.log(e.userDisplayName, 'redeemed Credits with this message:', e.input)
+      this.event.emit(EventName.REDEEM, e)
+    }))
+
+    this.handleSub('follow', () => this.listener.subscribeToChannelFollowEvents({id: this.userId}, e => {
+      console.log(e.userDisplayName, 'followed')
+      this.event.emit(EventName.FOLLOW, e)
     }))
 
     this.prompt()

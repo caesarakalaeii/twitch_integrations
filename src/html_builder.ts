@@ -3,7 +3,6 @@ import { StreamEvents, UserEvent } from './event_collector';
 import { messages, usernames } from './test_vars';
 import { htmlString } from './html_base';
 import ejs from 'ejs';
-import { publicDecrypt } from 'crypto';
 
 async function saveToFile(filename: string, streamEvents: StreamEvents){
   const html = ejs.render(htmlString, streamEvents);;
@@ -17,32 +16,38 @@ async function saveToFile(filename: string, streamEvents: StreamEvents){
 const events: StreamEvents = {
   newSubs: [],
   currentSubs: [],
+  gifted:[],
   cheers: [],
   redeems: [],
   follows: [],
 };
-for(let i = 0; i<200; i++){
+let max = 60
+for(let i = 0; i<max; i++){
   var name =  usernames[i%(usernames.length-1)]
-  if(i>60){
-    var message =  messages [i%(messages.length-1)]
-      var userEvent: UserEvent = {
-        user: name,
-        message: message
-      }
-    }
-  if(i<40){
+  var message =  messages [i%(messages.length-1)]
+  var userEvent: UserEvent = {
+    user: name,
+    message: message
+  }
+     
+  if(i<2*max/7){
     events.currentSubs.push(name)
   }
-  else if(i<80){
+  else if(i<3*max/7){
     events.follows.push(name)
   }
-  else if(i<120){
-    events.newSubs.push(userEvent)
+  else if(i<4*max/7){
+    events.newSubs.push(name)
   }
-  else if(i<160){
+  else if(i<5*max/7){
     events.cheers.push(userEvent)
   }
-  else if(i<200){
+  else if(i<6*max/7){
+    var amount = Math.floor(Math.random()*100)
+    userEvent.message = `Gifted ${amount} Subs`
+    events.gifted.push(userEvent)
+  }
+  else{
     events.redeems.push(userEvent)
   }
     

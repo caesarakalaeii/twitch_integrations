@@ -203,7 +203,7 @@ export const usernames: string[] = [
 export const messages: string[] = [
     "The purple elephant dances on Tuesdays",
     "Singing in the rain with a toaster",
-    "The monkey wears a tuxedo to the beach",
+    "Writing love letters to a friendly ghost",
     "When life gives you lemons, make paper airplanes",
     "Lost in a sea of marshmallows",
     "Whispering secrets to the moon",
@@ -231,6 +231,7 @@ export const messages: string[] = [
     "Hopping on one foot while eating spaghetti",
     "When elephants learn to dance ballet",
     "Swimming with dolphins in a bathtub",
+    "The magical powers of a talking tree, Practicing yoga with a herd of elephants, When clouds learn to play hide and seek, Baking a cake in the shape of a smile, The monkey wears a tuxedo to the beach",
     "The art of balancing spoons on your nose",
     "Knitting sweaters for giraffes",
     "Baking cookies in the shape of planets",
