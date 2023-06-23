@@ -9,6 +9,8 @@ import express, { Handler } from 'express'
 import bodyParser from 'body-parser'
 import bcrypt from 'bcrypt'
 import compression from 'compression'
+import { EventCollector, GiftEvent, UserEvent } from './event_collector'
+import { messages } from './test_vars'
 
 type Credentials = {
   username: string
@@ -30,6 +32,15 @@ export type Config = {
     port: number
     hostname?: string
     credentials?: Credentials[]
+  }
+  credits: {
+    newSubs: boolean,
+    gifts: boolean,
+    redeems: boolean,
+    follows: boolean, 
+    cheers: boolean,
+    currentSubs: boolean,
+    redeemId: string
   }
 }
 
@@ -74,6 +85,7 @@ export async function main () {
   let relais:Relais
   let arduino:Arduino
   let taser:Taser
+  let eventCollector:EventCollector
   const queue = new Queue()
   
   if (config.relais) relais = new Relais(config.relais)
@@ -91,23 +103,44 @@ export async function main () {
 
     console.log('taser config:', config.taser)
   }
+  if(config.credits){
+    eventCollector = new EventCollector()
+    
+  }
+
 
   esub.on(EventName.SUB, e => {
     if (!e.isGift) {
       if (relais) queue.add(() => relais.onFor('relais', config.time.sub))
       if (arduino) queue.add(() => arduino.onFor('money', config.time.sub))
+      if (config.credits.newSubs) queue.add(() => eventCollector.addNewSub(e.userDisplayName))
+      
     }
   })
 
   esub.on(EventName.GIFTSUB, e => {
     if (relais) queue.add(() => relais.onFor('relais', config.time.sub * e.amount))
     if (arduino) queue.add(() => arduino.onFor('money', config.time.sub * e.amount))
+    if (config.credits.gifts){
+      var giftEvent : GiftEvent = {
+        user: e.gifterDisplayName,
+        amount: e.amount
+      }
+      queue.add(() => eventCollector.addGifted(giftEvent))
+    }
   })
 
   esub.on(EventName.CHEER, e => {
     if (e.bits >= config.minBits) {
       if (relais) queue.add(() => relais.onFor('relais', config.time.bit * e.bits))
       if (arduino) queue.add(() => arduino.onFor('money', config.time.bit * e.bits))
+      if (config.credits.cheers){
+        var userEvent : UserEvent = {
+          user: e.userDisplayName,
+          message: e.message
+        }
+        queue.add(() => eventCollector.addCheer(userEvent))
+      }
     }
   })
 
@@ -117,6 +150,16 @@ export async function main () {
 
   esub.on(EventName.POINTSUP, e => {
     if (taser) taser.increasePower()
+  })
+
+  esub.on(EventName.REDEEM, e => {
+    if (config.credits.redeems) {
+      var userEvent : UserEvent = {
+        user: e.userDisplayName,
+        message: e.input
+      }
+      queue.add(() => eventCollector.addRedeem(userEvent))
+    }
   })
   
   const app = express()
