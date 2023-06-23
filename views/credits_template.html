@@ -79,14 +79,14 @@
       margin-bottom: 10px;
     }
 
-    .list_container_no_break {
+    p.list_no_break {
       font-size: 25px;
       color: white;
       text-align: center;
     }
 
     
-    .list_item_no_break:not(:last-child)::after {
+    span.comma_separated:not(:last-child)::after {
       content: ', ';
     }
 
@@ -137,13 +137,11 @@
 
   <% if (currentSubs?.length){%>
   <div class="list_title">Current Subscribers:</div>
-  <div class="list_container_no_break">
+  <p class="list_no_break">
     <% currentSubs.forEach(function(user, index) { %>
-      <div class="list_item_no_break">
-        <%= user %>
-      </div>
+      <span class="comma_separated"><%= user %></span>
     <% }) %>
-  </div>
+  </p>
   <% } %>
 
   <% if (cheers?.length){%>
@@ -184,9 +182,9 @@
 
   <% if (follows?.length){%>
   <div class="list_title">Follows:</div>
-  <p class="list_container_no_break">
+  <p class="list_no_break">
     <% follows.forEach(function(user, index) { %>
-      <span class="list_item_no_break">
+      <span class="comma_separated">
         <%= user %>
       </span>
     <% }) %>
