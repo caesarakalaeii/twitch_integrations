@@ -6,6 +6,7 @@ import {
   DirectConnectionAdapterConfig,
   EventSubChannelCheerEvent,
   EventSubChannelFollowEvent,
+  EventSubChannelRaidEvent,
   EventSubChannelSubscriptionEvent,
   EventSubChannelSubscriptionGiftEvent,
   EventSubListener,
@@ -71,6 +72,7 @@ export enum EventName {
   REDEEM = 'redeem',
   FOLLOW = 'follow',
   LIVE = 'live',
+  RAID = 'raid'
 }
 
 export class CaesarEventSub {
@@ -135,6 +137,7 @@ export class CaesarEventSub {
   on (event: EventName.REDEEM, listener: (event: EventSubChannelRedemptionAddEvent) => any): void
   on (event: EventName.FOLLOW, listener: (event: EventSubChannelFollowEvent) => any): void
   on (event: EventName.LIVE, listener: (event: EventSubStreamOnlineEvent) => any): void
+  on (event: EventName.RAID, listener: (event: EventSubChannelRaidEvent) => any): void
   on (event: EventName, listener: (...args: any[]) => any) {
     this.event.on(event, listener)
   }
@@ -204,7 +207,21 @@ export class CaesarEventSub {
       this.event.emit(EventName.FOLLOW, e)
     }))
 
+    this.handleSub('raid', () => this.listener.subscribeToChannelRaidEventsFrom({ id: this.userId }, e => {
+      console.log(e.raidingBroadcasterDisplayName, 'raided with: ', e.viewers)
+      this.event.emit(EventName.RAID, e)
+    }))
+
     this.prompt()
+  }
+
+  async getSubscriptions () {
+    await this.apiClient.subscriptions.getSubscriptionsPaginated(this.config.user)
+      .getAll()
+      .then((subs) => {
+        return subs
+      }
+      )
   }
 
   private command (arg: string[] | string) {

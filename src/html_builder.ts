@@ -13,6 +13,7 @@ function mockEvents () {
     cheers: [],
     redeems: [],
     follows: [],
+    raids: [],
     clips: []
   }
   const max = 60
