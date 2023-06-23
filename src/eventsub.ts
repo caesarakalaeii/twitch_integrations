@@ -9,13 +9,13 @@ import {
   EventSubChannelRaidEvent,
   EventSubChannelSubscriptionEvent,
   EventSubChannelSubscriptionGiftEvent,
+  EventSubChannelRedemptionAddEvent,
   EventSubListener,
   EventSubStreamOnlineEvent,
   EventSubSubscription,
   ReverseProxyAdapter,
   ReverseProxyAdapterConfig
 } from '@twurple/eventsub'
-import { EventSubChannelRedemptionAddEvent } from '@twurple/eventsub/lib/events/EventSubChannelRedemptionAddEvent'
 import { spawn } from 'child_process'
 import EventEmitter from 'events'
 import _ from 'lodash'
@@ -212,16 +212,17 @@ export class CaesarEventSub {
       this.event.emit(EventName.RAID, e)
     }))
 
+    this.handleSub('live', () => this.listener.subscribeToStreamOnlineEvents({ id: this.userId }, e => {
+      console.log(e.broadcasterDisplayName, 'went live ')
+      this.event.emit(EventName.LIVE, e)
+    }))
+
     this.prompt()
   }
 
+
   async getSubscriptions () {
-    await this.apiClient.subscriptions.getSubscriptionsPaginated(this.config.user)
-      .getAll()
-      .then((subs) => {
-        return subs
-      }
-      )
+    return await this.apiClient.subscriptions.getSubscriptionsPaginated({ id: this.userId }).getAll()
   }
 
   private command (arg: string[] | string) {

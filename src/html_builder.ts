@@ -1,5 +1,5 @@
 import path from 'path'
-import { CheerEvent, GiftEvent, StreamEvents, UserEvent } from './event_collector'
+import { CheerEvent, GiftEvent, RaidEvent, StreamEvents, UserEvent } from './event_collector'
 import { longMessage, testMessages, testUsernames } from './test_vars'
 import express from 'express'
 import { lookup } from 'mime-types'
@@ -17,6 +17,7 @@ function mockEvents () {
     clips: []
   }
   const max = 60
+  const functions = 8
   for (let i = 0; i < max; i++) {
     const name = testUsernames[i % (testUsernames.length - 1)]
     const message = testMessages[i % (testMessages.length - 1)]
@@ -25,13 +26,13 @@ function mockEvents () {
       message
     }
 
-    if (i < 2 * max / 7) {
+    if (i < 2 * max / functions) {
       events.currentSubs.push(name)
-    } else if (i < 3 * max / 7) {
+    } else if (i < 3 * max / functions) {
       events.follows.push(name)
-    } else if (i < 4 * max / 7) {
+    } else if (i < 4 * max / functions) {
       events.newSubs.push(name)
-    } else if (i < 5 * max / 7) {
+    } else if (i < 5 * max / functions) {
       const cheerEvent :CheerEvent = {
         user: name,
         amount: Math.floor(Math.random() * 100),
@@ -41,12 +42,18 @@ function mockEvents () {
         cheerEvent.messages.push(testMessages[Math.floor(Math.random() * (testMessages.length - 1))])
       }
       events.cheers.push(cheerEvent)
-    } else if (i < 6 * max / 7) {
+    } else if (i < 6 * max / functions) {
       const giftEvent: GiftEvent = {
         user: name,
         amount: Math.floor(Math.random() * 100)
       }
       events.gifted.push(giftEvent)
+    } else if (i < 7 * max / functions) {
+      const raidEvent: RaidEvent = {
+        user: name,
+        amount: Math.floor(Math.random() * 100)
+      }
+      events.raids.push(raidEvent)
     } else {
       events.redeems.push(userEvent)
     }
@@ -67,7 +74,7 @@ async function startServer () {
       }
     }
   }))
-  app.get('/mock', (req, res) => res.render('credits_template', mockEvents()))
+  app.get('/mock', (req, res) => res.render('credits', mockEvents()))
 
   await new Promise<void>(resolve => app.listen(3000, () => resolve()))
 }

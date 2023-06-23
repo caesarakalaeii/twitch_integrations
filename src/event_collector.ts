@@ -1,3 +1,4 @@
+import { HelixSubscription } from '@twurple/api'
 import { EventSubChannelCheerEvent, EventSubChannelSubscriptionGiftEvent, EventSubChannelRedemptionAddEvent, EventSubChannelSubscriptionEvent, EventSubChannelFollowEvent, EventSubChannelRaidEvent } from '@twurple/eventsub'
 
 export type UserEvent = {
@@ -34,12 +35,26 @@ export interface StreamEvents{
 export class EventCollector implements StreamEvents {
   streamEvents: StreamEvents
   newSubs: string[]
-  gifted: GiftEvent[]
   currentSubs: string[]
+  gifted: GiftEvent[]
   cheers: CheerEvent[]
   redeems: UserEvent[]
   follows: string[]
   raids: RaidEvent[]
+  clips?: { url: string }[]
+
+  constructor(){
+    this.streamEvents= {
+    newSubs: [],
+    gifted: [],
+    currentSubs: [],
+    cheers: [],
+    redeems: [],
+    follows: [],
+    raids: [],
+    }
+  }
+  
 
   async addSubs (user : string) {
     this.streamEvents.currentSubs.push(user)
@@ -97,6 +112,12 @@ export class EventCollector implements StreamEvents {
       user: e.userDisplayName,
       message: e.input
     })
+  }
+  async addAllSubs(subs: HelixSubscription[]){
+    for(const sub in subs){
+      console.log("Sub Handled: ", sub)
+      this.currentSubs.push(sub)
+    }
   }
 
   async getStreamEvents () {
