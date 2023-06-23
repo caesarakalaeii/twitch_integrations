@@ -7,6 +7,7 @@ import {
   EventSubChannelCheerEvent,
   EventSubChannelFollowEvent,
   EventSubChannelRaidEvent,
+  EventSubChannelRedemptionAddEvent,
   EventSubChannelSubscriptionEvent,
   EventSubChannelSubscriptionGiftEvent,
   EventSubListener,
@@ -15,13 +16,13 @@ import {
   ReverseProxyAdapter,
   ReverseProxyAdapterConfig
 } from '@twurple/eventsub'
-import { EventSubChannelRedemptionAddEvent } from '@twurple/eventsub/lib/events/EventSubChannelRedemptionAddEvent'
 import { spawn } from 'child_process'
 import EventEmitter from 'events'
 import _ from 'lodash'
 import stringArgv from 'string-argv'
 import yargs, { CommandModule } from 'yargs'
 import { AuthServer, AuthServerConfig } from './authserver'
+import { EOL } from 'os'
 
 export type DirectAdapterConfig = {
   adapterType: 'direct'
@@ -65,6 +66,7 @@ export type Config = {
 
 export enum EventName {
   SUB = 'sub',
+  SUB_MESSAGE = 'subMessage',
   CHEER = 'cheer',
   GIFTSUB = 'giftsub',
   POINTSUP = 'pointsUp',
@@ -72,7 +74,7 @@ export enum EventName {
   REDEEM = 'redeem',
   FOLLOW = 'follow',
   LIVE = 'live',
-  RAID = 'raid'
+  RAID = 'raid',
 }
 
 export class CaesarEventSub {
@@ -145,10 +147,11 @@ export class CaesarEventSub {
   private async handleSub (name: string, fn: () => Promise<EventSubSubscription>) {
     try {
       const sub = await fn()
-      console.log('eventsub', name, 'initialized')
+      console.log('eventsub %s initialized', name)
       this.subscriptions.set(name, sub)
+      await new Promise<void>((resolve) => setTimeout(resolve, 500))
     } catch (err) {
-      console.error('failed to initialize sub', name, 'reason:', err)
+      console.error('failed to initialize eventsub \'%s\'' + EOL + 'reason %s', name, err)
     }
   }
 
@@ -165,142 +168,99 @@ export class CaesarEventSub {
     await this.apiClient.eventSub.deleteAllSubscriptions()
     console.log('deleted all subscriptions')
 
-    await this.listener.listen()
+    await this.listener.start()
       .then(() => console.log('webhook for eventsubs is listening'))
       .catch(err => { console.log('listener failed to listen', err) })
 
-    this.handleSub('sub', () => this.listener.subscribeToChannelSubscriptionEvents({ id: this.userId }, e => {
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+
+    await this.handleSub(EventName.SUB_MESSAGE, () => this.listener.subscribeToChannelSubscriptionMessageEvents({ id: this.userId }, e => {
       // do something when a subscription was received
       console.log(e.userDisplayName, 'subscribed with a tier', e.tier, 'subscription')
       this.event.emit(EventName.SUB, e)
     }))
 
-    this.handleSub('giftsub', () => this.listener.subscribeToChannelSubscriptionGiftEvents({ id: this.userId }, e => {
+    await this.handleSub(EventName.SUB, () => this.listener.subscribeToChannelSubscriptionEvents({ id: this.userId }, e => {
+      // do something when a subscription was received
+      console.log(e.userDisplayName, 'subscribed with a tier', e.tier, 'subscription')
+      this.event.emit(EventName.SUB, e)
+    }))
+
+    await this.handleSub(EventName.GIFTSUB, () => this.listener.subscribeToChannelSubscriptionGiftEvents({ id: this.userId }, e => {
       // do something when a sub was gifted
       console.log(e.gifterDisplayName, 'gifted', e.amount || 1, 'tier', e.tier, 'subscriptions')
       this.event.emit(EventName.GIFTSUB, e)
     }))
 
-    this.handleSub('cheer', () => this.listener.subscribeToChannelCheerEvents({ id: this.userId }, e => {
+    await this.handleSub(EventName.CHEER, () => this.listener.subscribeToChannelCheerEvents({ id: this.userId }, e => {
       // do something when bits have been cheered
       console.log(e.userDisplayName, 'cheered', e.bits, 'with message:', e.message)
       this.event.emit(EventName.CHEER, e)
     }))
 
-    this.handleSub('pointsDown', () => this.listener.subscribeToChannelRedemptionAddEventsForReward({ id: this.userId }, this.downId, e => {
-      console.log(e.userDisplayName, 'redeemed Power Down with this message:', e.input)
-      this.event.emit(EventName.POINTSDOWN, e)
-    }))
+    if (this.downId) {
+      await this.handleSub(EventName.POINTSDOWN, () => this.listener.subscribeToChannelRedemptionAddEventsForReward({ id: this.userId }, this.downId, e => {
+        console.log(e.userDisplayName, 'redeemed Power Down with this message:', e.input)
+        this.event.emit(EventName.POINTSDOWN, e)
+      }))
+    }
 
-    this.handleSub('pointsUp', () => this.listener.subscribeToChannelRedemptionAddEventsForReward({ id: this.userId }, this.upId, e => {
-      console.log(e.userDisplayName, 'redeemed Power Up with this message:', e.input)
-      this.event.emit(EventName.POINTSUP, e)
-    }))
+    if (this.upId) {
+      await this.handleSub(EventName.POINTSUP, () => this.listener.subscribeToChannelRedemptionAddEventsForReward({ id: this.userId }, this.upId, e => {
+        console.log(e.userDisplayName, 'redeemed Power Up with this message:', e.input)
+        this.event.emit(EventName.POINTSUP, e)
+      }))
+    }
 
-    this.handleSub('redeem', () => this.listener.subscribeToChannelRedemptionAddEventsForReward({ id: this.userId }, this.redeemId, e => {
-      console.log(e.userDisplayName, 'redeemed Credits with this message:', e.input)
-      this.event.emit(EventName.REDEEM, e)
-    }))
+    if (this.redeemId) {
+      await this.handleSub(EventName.REDEEM, () => this.listener.subscribeToChannelRedemptionAddEventsForReward({ id: this.userId }, this.redeemId, e => {
+        console.log(e.userDisplayName, 'redeemed Credits with this message:', e.input)
+        this.event.emit(EventName.REDEEM, e)
+      }))
+    }
 
-    this.handleSub('follow', () => this.listener.subscribeToChannelFollowEvents({ id: this.userId }, e => {
+    await this.handleSub(EventName.FOLLOW, () => this.listener.subscribeToChannelFollowEvents({ id: this.userId }, e => {
       console.log(e.userDisplayName, 'followed')
       this.event.emit(EventName.FOLLOW, e)
     }))
 
-    this.handleSub('raid', () => this.listener.subscribeToChannelRaidEventsFrom({ id: this.userId }, e => {
+    await this.handleSub(EventName.RAID, () => this.listener.subscribeToChannelRaidEventsFrom({ id: this.userId }, e => {
       console.log(e.raidingBroadcasterDisplayName, 'raided with: ', e.viewers)
       this.event.emit(EventName.RAID, e)
     }))
-
-    this.prompt()
   }
 
   async getSubscriptions () {
-    await this.apiClient.subscriptions.getSubscriptionsPaginated(this.config.user)
-      .getAll()
-      .then((subs) => {
-        return subs
-      }
-      )
+    return await this.apiClient.subscriptions.getSubscriptionsPaginated(this.config.user).getAll()
   }
 
-  private command (arg: string[] | string) {
-    return new Promise<Record<string, any>>((resolve, reject) => {
-      let y = yargs()
-
-      y = y.scriptName('')
-
-      const subsGetCommand:CommandModule<any, any> = {
-        command: 'get',
-        describe: 'shows the subscriptions',
-        handler: () => this.apiClient.eventSub.getSubscriptions()
-          .then(result => {
-            console.log(result.total, 'subscriptions:')
-            const ml = String(result.data.length).length
-            result.data.forEach((sub, i) => console.log(String(i + 1).padStart(ml) + ':', _.pick(sub, ['type', 'status'])))
-          })
-      }
-
-      const subsListCommand:CommandModule<any, any> = {
-        command: 'list',
-        aliases: ['l', 'ls'],
-        describe: 'lists all available eventsubs',
-        handler: () => Array.from(this.subscriptions.entries())
-          .forEach(([name]) => console.log('-', name))
-      }
-
-      const subsTestCommand:CommandModule<any, any> = {
-        command: 'test <name>',
-        aliases: ['t'],
-        describe: 'executes a test command for the given eventsub',
-        builder: cmd => cmd
-          .positional('name', {
-            type: 'string'
-          }),
-        handler: async args => {
-          const sub = this.subscriptions.get(args.name)
-          if (!sub) {
-            console.log('you need to tell me what subscription you want, available are:', Array.from(this.subscriptions.keys()))
-            return
-          }
-
-          const test = await sub.getCliTestCommand()
-          const [cmd, ...cmdArgs] = stringArgv(test)
-          await new Promise<number>((resolve, reject) => {
-            const cp = spawn(cmd, cmdArgs, { stdio: 'inherit' })
-            cp.on('exit', code => resolve(code))
-            cp.on('error', err => reject(err))
-          })
-        }
-      }
-
-      const subsCommand:CommandModule<any, any> = {
-        command: 'subs',
-        aliases: ['eventsub', 'es', 's'],
-        describe: 'do stuff with eventsubs',
-        builder: cmd => cmd
-          .command(subsGetCommand)
-          .command(subsListCommand)
-          .command(subsTestCommand),
-        handler: () => {}
-      }
-      y = y.command(subsCommand)
-
-      y.parse(arg, { }, (err, argv, output) => {
-        if (output) {
-          console.log(output)
-        }
-        if (err) return reject(err)
-        resolve(argv)
+  async getEventSubs () {
+    return this.apiClient.eventSub.getSubscriptions()
+      .then(result => {
+        console.log(result.total, 'subscriptions:')
+        const ml = String(result.data.length).length
+        result.data.forEach((sub, i) => console.log(String(i + 1).padStart(ml) + ':', _.pick(sub, ['type', 'status'])))
       })
-    })
   }
 
-  prompt () {
-    process.stdin.on('data', chunk => {
-      // const args = stringArgv(chunk.toString())
-      // this.command([...args, undefined])
-      this.command(chunk.toString())
+  listEventSubs () {
+    Array.from(this.subscriptions.entries())
+      .forEach(([name]) => console.log('-', name))
+  }
+
+  async testSub (name: string) {
+    const sub = this.subscriptions.get(name)
+    if (!sub) {
+      console.log('you need to tell me what subscription you want, available are:', Array.from(this.subscriptions.keys()))
+      return
+    }
+
+    const test = await sub.getCliTestCommand()
+    const [cmd, ...cmdArgs] = stringArgv(test)
+    await new Promise<number>((resolve, reject) => {
+      const cp = spawn(cmd, cmdArgs, { stdio: 'inherit' })
+      cp.on('exit', code => resolve(code))
+      cp.on('error', err => reject(err))
     })
   }
 

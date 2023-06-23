@@ -37,9 +37,9 @@
   },
   "dependencies": {
     "@kounadev/loadfile": "^1.0.0",
-    "@twurple/api": "^5.2.0",
-    "@twurple/auth": "^5.2.1",
-    "@twurple/eventsub": "^5.2.0",
+    "@twurple/api": "^5.3.4",
+    "@twurple/auth": "^5.3.4",
+    "@twurple/eventsub": "^5.3.4",
     "bcrypt": "^5.0.1",
     "body-parser": "^1.20.0",
     "compression": "^1.7.4",
