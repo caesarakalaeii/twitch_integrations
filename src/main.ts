@@ -9,7 +9,7 @@ import express, { Handler } from 'express'
 import bodyParser from 'body-parser'
 import bcrypt from 'bcrypt'
 import compression from 'compression'
-import { CheerEvent, EventCollector, GiftEvent, UserEvent } from './event_collector'
+import { EventCollector } from './event_collector'
 
 type Credentials = {
   username: string
