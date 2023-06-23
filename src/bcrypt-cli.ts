@@ -11,7 +11,7 @@ export async function main () {
   const { password, repeatPassword } = await prompts([{
     name: 'password',
     type: 'password',
-    message: 'Enter Password:',
+    message: 'Enter Password:'
   }, {
     name: 'repeatPassword',
     type: 'password',

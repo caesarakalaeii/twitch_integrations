@@ -1,6 +1,4 @@
-import { HelixClip } from "@twurple/api"
-import { EventSubChannelCheerEvent, EventSubChannelSubscriptionGiftEvent,EventSubChannelRedemptionAddEvent, EventSubChannelSubscriptionEvent, EventSubChannelFollowEvent } from "@twurple/eventsub"
-
+import { EventSubChannelCheerEvent, EventSubChannelFollowEvent, EventSubChannelRedemptionAddEvent, EventSubChannelSubscriptionEvent, EventSubChannelSubscriptionGiftEvent } from '@twurple/eventsub'
 
 export type UserEvent = {
     user: string,
@@ -27,9 +25,6 @@ export interface StreamEvents{
 }
 
 export class EventCollector implements StreamEvents {
-  
-  constructor () {
-  }
   streamEvents: StreamEvents
   newSubs: string[]
   gifted: GiftEvent[]
@@ -38,16 +33,15 @@ export class EventCollector implements StreamEvents {
   redeems: UserEvent[]
   follows: string[]
 
-  async addSubs(user : string){
+  async addSubs (user : string) {
     this.streamEvents.currentSubs.push(user)
   }
 
-  async addGifted(e: EventSubChannelSubscriptionGiftEvent){
-    const gift = this.streamEvents.gifted.find(item => item.user == e.gifterDisplayName)
-    if(gift){
+  async addGifted (e: EventSubChannelSubscriptionGiftEvent) {
+    const gift = this.streamEvents.gifted.find(item => item.user === e.gifterDisplayName)
+    if (gift) {
       gift.amount += e.amount
-    }
-    else{
+    } else {
       this.streamEvents.gifted.push({
         user: e.gifterDisplayName,
         amount: e.amount
@@ -55,22 +49,21 @@ export class EventCollector implements StreamEvents {
     }
   }
 
-  async addFollow(e: EventSubChannelFollowEvent){
+  async addFollow (e: EventSubChannelFollowEvent) {
     this.streamEvents.follows.push(e.userDisplayName)
   }
-  
-  async addNewSub(e : EventSubChannelSubscriptionEvent){
+
+  async addNewSub (e : EventSubChannelSubscriptionEvent) {
     this.streamEvents.newSubs.push(e.userDisplayName)
   }
 
-  async addCheer(e: EventSubChannelCheerEvent){
-    const cheer = this.streamEvents.cheers.find(item => item.user == e.userDisplayName)
-    
-    if(cheer){
+  async addCheer (e: EventSubChannelCheerEvent) {
+    const cheer = this.streamEvents.cheers.find(item => item.user === e.userDisplayName)
+
+    if (cheer) {
       cheer.amount += e.bits
       cheer.messages.push(e.message)
-    }
-    else{
+    } else {
       this.streamEvents.cheers.push({
         user: e.userDisplayName,
         amount: e.bits,
@@ -79,16 +72,14 @@ export class EventCollector implements StreamEvents {
     }
   }
 
-  async addRedeem(e: EventSubChannelRedemptionAddEvent){
+  async addRedeem (e: EventSubChannelRedemptionAddEvent) {
     this.streamEvents.redeems.push({
       user: e.userDisplayName,
       message: e.input
     })
   }
 
-  async getStreamEvents(){
+  async getStreamEvents () {
     return this.streamEvents
   }
-
-
 }

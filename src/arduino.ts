@@ -1,4 +1,3 @@
-/* global BufferEncoding */
 import { SerialPort, SerialPortOpenOptions } from 'serialport'
 import { Queue } from './queue'
 import { wait } from './wait'
@@ -27,10 +26,12 @@ export class Arduino {
     return new Promise<void>((resolve, reject) => {
       const data = Buffer.from([(this.config.action[type] << 1) + (active ? 1 : 0)])
       if (this.config.log) console.log('writing', data, 'to serial')
-      if (this.serial) this.serial.write(data, (err) => {
-        if (err) return reject(err)
-        resolve()
-      })
+      if (this.serial) {
+        this.serial.write(data, (err) => {
+          if (err) return reject(err)
+          resolve()
+        })
+      }
     })
   }
 

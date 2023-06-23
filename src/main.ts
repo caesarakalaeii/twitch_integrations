@@ -36,7 +36,7 @@ export type Config = {
     newSubs: boolean,
     gifts: boolean,
     redeems: boolean,
-    follows: boolean, 
+    follows: boolean,
     cheers: boolean,
     currentSubs: boolean,
     redeemId: string
@@ -51,7 +51,7 @@ const createAuthMiddleware:{(creds: Credentials[]): Handler} = function (creds) 
       return res.sendStatus(401)
     }
 
-    const [method, data, ...rest] = authHeader.split(/\s/)
+    const [method, data] = authHeader.split(/\s/)
 
     if (method.toLowerCase() !== 'basic') {
       return res.sendStatus(401)
@@ -86,7 +86,7 @@ export async function main () {
   let taser:Taser
   let eventCollector:EventCollector
   const queue = new Queue()
-  
+
   if (config.relais) relais = new Relais(config.relais)
   if (config.arduino) arduino = new Arduino(config.arduino)
   if (config.taser) {
@@ -102,18 +102,15 @@ export async function main () {
 
     console.log('taser config:', config.taser)
   }
-  if(config.credits){
+  if (config.credits) {
     eventCollector = new EventCollector()
-    
   }
-
 
   esub.on(EventName.SUB, e => {
     if (!e.isGift) {
       if (relais) queue.add(() => relais.onFor('relais', config.time.sub))
       if (arduino) queue.add(() => arduino.onFor('money', config.time.sub))
       if (config.credits.newSubs) queue.add(() => eventCollector.addNewSub(e))
-      
     }
   })
 
@@ -128,7 +125,6 @@ export async function main () {
       if (relais) queue.add(() => relais.onFor('relais', config.time.bit * e.bits))
       if (arduino) queue.add(() => arduino.onFor('money', config.time.bit * e.bits))
       if (config.credits.cheers) queue.add(() => eventCollector.addCheer(e))
-      
     }
   })
 
@@ -144,10 +140,10 @@ export async function main () {
     if (config.credits.redeems)queue.add(() => eventCollector.addRedeem(e))
   })
 
-  esub.on(EventName.FOLLOW, e =>{
-    if(config.credits.follows) queue.add(() => eventCollector.addFollow(e))
+  esub.on(EventName.FOLLOW, e => {
+    if (config.credits.follows) queue.add(() => eventCollector.addFollow(e))
   })
-  
+
   const app = express()
 
   if (Array.isArray(config.api.credentials) && config.api.credentials.length) {
@@ -160,18 +156,18 @@ export async function main () {
   if (arduino) {
     app.post('/arduino/:keyword/:command', (req, res) => {
       const { keyword, command } = req.params
-  
+      const t = String(req.query.t)
+
       if (!arduino.isKeyword(keyword)) {
         return res.status(400).end('Illegal Keyword')
       }
-  
+
       switch (command.toLowerCase()) {
         case 'on':
           arduino.on(keyword as Keyword)
           res.sendStatus(200)
           break
         case 'onfor':
-          const { t } = req.query
           arduino.onFor(keyword as Keyword, t ? Number(t) : 1000)
             .then(() => res.sendStatus(200))
             .catch(err => {

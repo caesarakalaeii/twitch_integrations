@@ -26,6 +26,7 @@ export class AuthServer implements AuthProvider {
     resolve: (code: string) => any,
     reject: (reason: any) => any
   }
+
   private config: AuthServerConfig
   private port: number
 
@@ -42,7 +43,7 @@ export class AuthServer implements AuthProvider {
     }
     this.port = Number(url.port) || 8080
 
-    this.app.get('/auth', (req, res, next) => {
+    this.app.get('/auth', (req, res) => {
       const { scope } = req.query
       const params = new URLSearchParams({
         client_id: this.config.clientId,
@@ -53,8 +54,8 @@ export class AuthServer implements AuthProvider {
       res.redirect(new URL('?' + params.toString(), this.config.apiUrl).toString())
     })
 
-    this.app.get(url.pathname, (req, res, next) => {
-      const { code, scope, state } = req.query
+    this.app.get(url.pathname, (req, res) => {
+      const { code, scope } = req.query
       const authorizer = this.authorizer
       if (authorizer) {
         this.currentScopes = (scope as string).split(' ')
@@ -71,6 +72,7 @@ export class AuthServer implements AuthProvider {
   get clientId (): string {
     return this.config.clientId
   }
+
   tokenType: AuthProviderTokenType = 'user'
   authorizationType?: string
   currentScopes: string[]
@@ -85,11 +87,12 @@ export class AuthServer implements AuthProvider {
       const token = await exchangeCode(this.config.clientId, this.config.clientSecret, code, this.config.redirectUri)
       this.refreshingProvider = new RefreshingAuthProvider({
         clientId: this.config.clientId,
-        clientSecret: this.config.clientSecret,
+        clientSecret: this.config.clientSecret
       }, token)
       return token
     }
   }
+
   refresh?: () => Promise<AccessToken> = async () => {
     if (this.refreshingProvider) {
       return await this.refreshingProvider.refresh()
@@ -101,8 +104,8 @@ export class AuthServer implements AuthProvider {
     return await new Promise<string>((resolve, reject) => {
       console.log('go to', `http://localhost:${this.port}/auth?` + new URLSearchParams({
         scope: Array.from(new Set([
-        ...this.config.scopes,
-        ...(scopes || [])
+          ...this.config.scopes,
+          ...(scopes || [])
         ])).join(' ')
       }))
       this.authorizer = { resolve, reject }

@@ -1,6 +1,5 @@
-import { ApiClient } from '@twurple/api'
+import { ApiClient, HelixClipFilter } from '@twurple/api'
 import { ClientCredentialsAuthProvider } from '@twurple/auth'
-import { AuthServerConfig, AuthServer } from './authserver'
 import {
   ConnectionAdapter,
   DirectConnectionAdapter,
@@ -13,16 +12,15 @@ import {
   EventSubStreamOnlineEvent,
   EventSubSubscription,
   ReverseProxyAdapter,
-  ReverseProxyAdapterConfig,
+  ReverseProxyAdapterConfig
 } from '@twurple/eventsub'
+import { EventSubChannelRedemptionAddEvent } from '@twurple/eventsub/lib/events/EventSubChannelRedemptionAddEvent'
+import { spawn } from 'child_process'
 import EventEmitter from 'events'
-import prompts from 'prompts'
+import _ from 'lodash'
 import stringArgv from 'string-argv'
 import yargs, { CommandModule } from 'yargs'
-import { spawn } from 'child_process'
-import _ from 'lodash'
-import { EventSubChannelRedemptionAddEvent, EventSubChannelRedemptionAddEventData } from '@twurple/eventsub/lib/events/EventSubChannelRedemptionAddEvent'
-import { EventSubChannelFollowEventData } from '@twurple/eventsub/lib/events/EventSubChannelFollowEvent'
+import { AuthServer, AuthServerConfig } from './authserver'
 
 export type DirectAdapterConfig = {
   adapterType: 'direct'
@@ -114,11 +112,17 @@ export class CaesarEventSub {
     })
   }
 
-  async getClips(useTime?: boolean) {
-    return await this.apiClient.clips.getClipsForBroadcasterPaginated(this.config.user, useTime ? {
-      startDate: this.start.toISOString(),
-      endDate: new Date().toISOString()
-    }: undefined).getAll().then((clips) => clips.map(clip => ({ url: clip.embedUrl })))
+  async getClips (useTime?: boolean) {
+    const clipFilter: HelixClipFilter = useTime
+      ? {
+          startDate: this.start.toISOString(),
+          endDate: new Date().toISOString()
+        }
+      : undefined
+    return await this.apiClient.clips
+      .getClipsForBroadcasterPaginated(this.config.user, clipFilter)
+      .getAll()
+      .then((clips) => clips.map(clip => ({ url: clip.embedUrl })))
   }
 
   private subscriptions:Map<string, EventSubSubscription> = new Map()
@@ -159,8 +163,8 @@ export class CaesarEventSub {
     console.log('deleted all subscriptions')
 
     await this.listener.listen()
-    .then(() => console.log('webhook for eventsubs is listening'))
-    .catch(err => { console.log('listener failed to listen', err) })
+      .then(() => console.log('webhook for eventsubs is listening'))
+      .catch(err => { console.log('listener failed to listen', err) })
 
     this.handleSub('sub', () => this.listener.subscribeToChannelSubscriptionEvents({ id: this.userId }, e => {
       // do something when a subscription was received
@@ -180,22 +184,22 @@ export class CaesarEventSub {
       this.event.emit(EventName.CHEER, e)
     }))
 
-    this.handleSub('pointsDown', () => this.listener.subscribeToChannelRedemptionAddEventsForReward({id: this.userId}, this.downId, e => {
+    this.handleSub('pointsDown', () => this.listener.subscribeToChannelRedemptionAddEventsForReward({ id: this.userId }, this.downId, e => {
       console.log(e.userDisplayName, 'redeemed Power Down with this message:', e.input)
       this.event.emit(EventName.POINTSDOWN, e)
     }))
 
-    this.handleSub('pointsUp', () => this.listener.subscribeToChannelRedemptionAddEventsForReward({id: this.userId}, this.upId, e => {
+    this.handleSub('pointsUp', () => this.listener.subscribeToChannelRedemptionAddEventsForReward({ id: this.userId }, this.upId, e => {
       console.log(e.userDisplayName, 'redeemed Power Up with this message:', e.input)
       this.event.emit(EventName.POINTSUP, e)
     }))
 
-    this.handleSub('redeem', () => this.listener.subscribeToChannelRedemptionAddEventsForReward({id: this.userId}, this.redeemId, e => {
+    this.handleSub('redeem', () => this.listener.subscribeToChannelRedemptionAddEventsForReward({ id: this.userId }, this.redeemId, e => {
       console.log(e.userDisplayName, 'redeemed Credits with this message:', e.input)
       this.event.emit(EventName.REDEEM, e)
     }))
 
-    this.handleSub('follow', () => this.listener.subscribeToChannelFollowEvents({id: this.userId}, e => {
+    this.handleSub('follow', () => this.listener.subscribeToChannelFollowEvents({ id: this.userId }, e => {
       console.log(e.userDisplayName, 'followed')
       this.event.emit(EventName.FOLLOW, e)
     }))
@@ -203,7 +207,7 @@ export class CaesarEventSub {
     this.prompt()
   }
 
-  private command(arg: string[] | string) {
+  private command (arg: string[] | string) {
     return new Promise<Record<string, any>>((resolve, reject) => {
       let y = yargs()
 
@@ -216,7 +220,7 @@ export class CaesarEventSub {
           .then(result => {
             console.log(result.total, 'subscriptions:')
             const ml = String(result.data.length).length
-            result.data.forEach((sub, i, arr) => console.log(String(i + 1).padStart(ml) + ':', _.pick(sub, ['type', 'status'])))
+            result.data.forEach((sub, i) => console.log(String(i + 1).padStart(ml) + ':', _.pick(sub, ['type', 'status'])))
           })
       }
 
@@ -225,7 +229,7 @@ export class CaesarEventSub {
         aliases: ['l', 'ls'],
         describe: 'lists all available eventsubs',
         handler: () => Array.from(this.subscriptions.entries())
-          .forEach(([name, sub]) => console.log('-', name))
+          .forEach(([name]) => console.log('-', name))
       }
 
       const subsTestCommand:CommandModule<any, any> = {
@@ -270,7 +274,7 @@ export class CaesarEventSub {
           console.log(output)
         }
         if (err) return reject(err)
-        resolve (argv)
+        resolve(argv)
       })
     })
   }
