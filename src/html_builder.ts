@@ -1,5 +1,5 @@
 import { CheerEvent, GiftEvent, RaidEvent, StreamEvents, UserEvent } from './event_collector'
-import { longMessage, testMessages, testUsernames } from './test_vars'
+import { testMessages, testUsernames } from './test_vars'
 
 // Example usage
 export function mockEvents () {
@@ -33,7 +33,7 @@ export function mockEvents () {
       const cheerEvent :CheerEvent = {
         user: name,
         amount: Math.floor(Math.random() * 100),
-        messages: [longMessage]
+        messages: [message]
       }
       for (let i = 1; i < Math.floor(Math.random() * 5); i++) {
         cheerEvent.messages.push(testMessages[Math.floor(Math.random() * (testMessages.length - 1))])
@@ -55,6 +55,7 @@ export function mockEvents () {
       events.redeems.push(userEvent)
     }
   }
+  events.clips = []
 
   return events
 }
