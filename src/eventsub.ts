@@ -1,4 +1,4 @@
-import { ApiClient, HelixClipFilter } from '@twurple/api'
+import { ApiClient, HelixClip, HelixClipFilter, HelixGame, HelixUser } from '@twurple/api'
 import { ClientCredentialsAuthProvider } from '@twurple/auth'
 import {
   ConnectionAdapter,
@@ -18,10 +18,12 @@ import {
 } from '@twurple/eventsub'
 import { spawn } from 'child_process'
 import EventEmitter from 'events'
+import fs from 'fs'
 import _ from 'lodash'
 import { EOL } from 'os'
 import stringArgv from 'string-argv'
 import { AuthServer, AuthServerConfig } from './authserver'
+import path from 'path'
 
 export type DirectAdapterConfig = {
   adapterType: 'direct'
@@ -61,6 +63,7 @@ export type Config = {
   upId: string
   downId :string
   redeemId: string
+  clipsDir: string
 } & AdapterConfig
 
 export enum EventName {
@@ -76,25 +79,62 @@ export enum EventName {
   RAID = 'raid',
 }
 
+type ClipPick = Pick<HelixClip, 'creationDate' | 'duration' | 'embedUrl' | 'thumbnailUrl' |
+  'url' | 'creatorId' | 'creatorDisplayName' | 'gameId' | 'views' | 'title' | 'broadcasterDisplayName' |
+  'broadcasterId' | 'id' | 'vodOffset'>
+type UserPick = Pick<HelixUser, 'displayName' | 'description' | 'profilePictureUrl'>
+type GamePick = Pick<HelixGame, 'name' | 'boxArtUrl'>
+
+export type PlainClip = {
+  game: GamePick,
+  creator: UserPick,
+  broadcaster: UserPick,
+} & ClipPick
+
+export async function youtubeDLP (url: string, options?: { output?: string, format?: string }) {
+  const args: string[] = []
+  if (options?.format) {
+    args.push('-f', options.format)
+  }
+  args.push(url)
+  if (options?.output) {
+    args.push('-o', options.output)
+  }
+
+  return await new Promise<void>((resolve, reject) => {
+    const cp = spawn('yt-dlp', args, {
+      stdio: 'inherit',
+      cwd: process.cwd()
+    })
+
+    cp.on('exit', (code) => code === 0
+      ? resolve()
+      : reject(new Error('child process exited with code ' + code)))
+  })
+}
+
 export class CaesarEventSub {
   private appAuth: ClientCredentialsAuthProvider
   private userAuth: AuthServer
-  private apiClient: ApiClient
+  public readonly apiClient: ApiClient
   private adapter: ConnectionAdapter
-  private listener: EventSubListener
-  private event: EventEmitter = new EventEmitter()
-  private userId: string
+  public readonly listener: EventSubListener
+  public readonly event: EventEmitter = new EventEmitter()
+  private __userId: string
+  public get userId () { return this.__userId }
   private downId : string
   private upId: string
   private redeemId: string
-  private start = new Date()
+  public readonly start = new Date()
+  public readonly clipsDir: string
 
-  constructor (private config: Config) {
+  constructor (public readonly config: Config) {
     this.appAuth = new ClientCredentialsAuthProvider(this.config.appAuth.clientId, this.config.appAuth.clientSecret, this.config.appAuth.impliedScopes)
     this.userAuth = new AuthServer(this.config.userAuth)
     this.upId = this.config.upId
     this.downId = this.config.downId
     this.redeemId = this.config.redeemId
+    this.clipsDir = this.config.clipsDir || './clips'
 
     this.apiClient = new ApiClient({
       authProvider: this.appAuth
@@ -113,6 +153,10 @@ export class CaesarEventSub {
       apiClient: this.apiClient,
       secret: this.config.secret
     })
+
+    fs.promises.mkdir(this.clipsDir, {
+      recursive: true
+    }).catch((err) => console.error(err))
   }
 
   private subscriptions:Map<string, EventSubSubscription> = new Map()
@@ -149,7 +193,7 @@ export class CaesarEventSub {
     if (!user) throw new Error('can\'t find user by name: ' + this.config.user)
 
     console.log('id for user', this.config.user, 'is', user.id)
-    this.userId = user.id
+    this.__userId = user.id
 
     await this.apiClient.eventSub.deleteAllSubscriptions()
     console.log('deleted all subscriptions')
@@ -225,18 +269,89 @@ export class CaesarEventSub {
     return await this.apiClient.subscriptions.getSubscriptionsPaginated({ id: this.userId }).getAll()
   }
 
-  async getClips (useTime?: boolean) {
+  userToPlain (user: HelixUser) {
+    return {
+      displayName: user.displayName,
+      description: user.description,
+      profilePictureUrl: user.profilePictureUrl
+    }
+  }
+
+  gameToPlain (game: HelixGame) {
+    return {
+      name: game.name,
+      boxArtUrl: game.boxArtUrl
+    }
+  }
+
+  async clipToPlain (clip: HelixClip): Promise<PlainClip> {
+    const filePath = path.join(this.clipsDir, clip.id + '.json')
+
+    const accessible = await fs.promises.access(filePath, fs.constants.R_OK)
+      .then(() => true)
+      .catch(() => false)
+    if (accessible) {
+      return fs.promises.readFile(filePath).then((data) => JSON.parse(data.toString()))
+    }
+
+    const [game, broadcaster, creator] = await Promise.all([
+      clip.getGame().then((res) => this.gameToPlain(res)),
+      clip.getBroadcaster().then((res) => this.userToPlain(res)),
+      clip.getCreator().then((res) => this.userToPlain(res))
+    ])
+
+    const plain:PlainClip = {
+      creationDate: clip.creationDate,
+      duration: clip.duration,
+      embedUrl: clip.embedUrl,
+      thumbnailUrl: clip.thumbnailUrl,
+      url: clip.url,
+      creatorId: clip.creatorId,
+      creatorDisplayName: clip.creatorDisplayName,
+      gameId: clip.gameId,
+      views: clip.views,
+      title: clip.title,
+      broadcasterDisplayName: clip.broadcasterDisplayName,
+      broadcasterId: clip.broadcasterId,
+      id: clip.id,
+      vodOffset: clip.vodOffset,
+      broadcaster,
+      creator,
+      game
+    }
+
+    await fs.promises.writeFile(filePath, JSON.stringify(plain, null, '  '))
+      .catch((err) => console.warn('could not save %s. reason %s', filePath, err))
+    return plain
+  }
+
+  async getClips (useTime?: boolean | number | string | Date) {
     const clipFilter: HelixClipFilter = useTime
       ? {
-          startDate: this.start.toISOString(),
+          startDate: typeof useTime === 'boolean'
+            ? this.start.toISOString()
+            : new Date(useTime).toISOString(),
           endDate: new Date().toISOString()
         }
       : undefined
 
-    return await this.apiClient.clips
-      .getClipsForBroadcasterPaginated({ id: this.config.user }, clipFilter)
+    const clips = await this.apiClient.clips
+      .getClipsForBroadcasterPaginated({ id: this.userId }, clipFilter)
       .getAll()
-      .then((clips) => clips.map(clip => ({ url: clip.embedUrl })))
+      .then((clips) => Promise.all(clips.map((clip) => this.clipToPlain(clip))))
+
+    const clipPaths = clips.map((clip) => path.join(this.clipsDir, clip.id + '.mp4'))
+
+    for (let i = 0; i < clips.length; i++) {
+      const clip = clips[i]
+      const clipPath = clipPaths[i]
+      if (fs.existsSync(clipPath)) {
+        continue
+      }
+      await youtubeDLP(clip.url, { output: clipPath })
+    }
+
+    return clips
   }
 
   listEventSubs () {

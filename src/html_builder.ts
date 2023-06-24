@@ -1,11 +1,8 @@
-import path from 'path'
 import { CheerEvent, GiftEvent, RaidEvent, StreamEvents, UserEvent } from './event_collector'
 import { longMessage, testMessages, testUsernames } from './test_vars'
-import express from 'express'
-import { lookup } from 'mime-types'
 
 // Example usage
-function mockEvents () {
+export function mockEvents () {
   const events: StreamEvents = {
     newSubs: [],
     currentSubs: [],
@@ -62,23 +59,5 @@ function mockEvents () {
   return events
 }
 
-async function startServer () {
-  const app = express()
-
-  app.set('view engine', 'ejs')
-  app.use('/content', express.static(path.join(__dirname, '../content'), {
-    setHeaders (res, path) {
-      const mime = lookup(path)
-      if (mime) {
-        res.setHeader('content-type', mime)
-      }
-    }
-  }))
-  app.get('/mock', (req, res) => res.render('credits', mockEvents()))
-
-  await new Promise<void>(resolve => app.listen(3000, () => resolve()))
-}
-
-startServer()
-  .then(() => 'listening')
-  .catch((err) => console.error(err))
+// server has been removed from this file
+// use the api server from main.ts with /credits?mock

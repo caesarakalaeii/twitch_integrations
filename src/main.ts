@@ -1,19 +1,21 @@
-import { CaesarEventSub, EventName } from './eventsub'
 import { loadFile } from '@kounadev/loadfile'
-import { CaesarEventSubConfig } from '.'
-import { Relais, RelaisConfig } from './relais'
-import { Arduino, ArduinoConfig, Keyword } from './arduino'
-import { Taser, TaserConfig } from './taser'
-import { Queue } from './queue'
-import express, { Handler } from 'express'
-import bodyParser from 'body-parser'
 import bcrypt from 'bcrypt'
+import bodyParser from 'body-parser'
 import compression from 'compression'
-import { EventCollector } from './event_collector'
+import express, { Handler, NextFunction, Request, Response } from 'express'
+import fs from 'fs'
+import _ from 'lodash'
 import { lookup } from 'mime-types'
 import path from 'path'
 import repl from 'repl'
-import _ from 'lodash'
+import { CaesarEventSubConfig } from '.'
+import { Arduino, ArduinoConfig, Keyword } from './arduino'
+import { EventCollector } from './event_collector'
+import { CaesarEventSub, EventName } from './eventsub'
+import { Queue } from './queue'
+import { Relais, RelaisConfig } from './relais'
+import { Taser, TaserConfig } from './taser'
+import { mockEvents } from './html_builder'
 
 type Credentials = {
   username: string
@@ -87,11 +89,70 @@ const createAuthMiddleware:{(creds: Credentials[]): Handler} = function (creds) 
 type Scope = {
   config: Config
   ecol: EventCollector
+  esub: CaesarEventSub
   arduino: Arduino
   relais: Relais
 }
 
-export async function startServer ({ config, arduino, relais, ecol }: Scope) {
+export const CHUNK_SIZE = 10 ** 6 // 1MB chunk size
+export async function fileStream (filePath: string, req: Request, res: Response, next: NextFunction) {
+  const fileStat = await fs.promises.stat(filePath).catch((err) => {
+    console.error(err)
+    return null
+  })
+
+  if (!fileStat) {
+    return res.sendStatus(404)
+  }
+
+  const fileSize = fileStat.size
+  const range = req.headers.range
+  const mimeType = lookup(filePath) || 'application/octet-stream'
+
+  if (range) {
+    const [start, end] = range.replace(/bytes=/, '').split('-')
+    const fileStart = parseInt(start, 10)
+    const fileEnd = end ? parseInt(end, 10) : fileSize - 1
+    const chunkSize = fileEnd - fileStart + 1
+
+    res.status(206) // Partial Content
+    res.setHeader('Content-Range', `bytes ${fileStart}-${fileEnd}/${fileSize}`)
+    res.setHeader('Content-Length', chunkSize)
+    res.setHeader('Content-Type', mimeType)
+    res.setHeader('Accept-Ranges', 'bytes')
+    res.setHeader('Cache-Policy', 'max-age=3600')
+
+    const fileStream = fs.createReadStream(filePath, { start: fileStart, end: fileEnd })
+
+    fileStream.on('open', () => {
+      fileStream.pipe(res)
+    })
+
+    fileStream.on('error', (err) => {
+      console.error(err)
+      next(err)
+    })
+  } else {
+    res.status(200) // OK
+    res.setHeader('Content-Length', fileSize)
+    res.setHeader('Content-Type', mimeType)
+    res.setHeader('Accept-Ranges', 'bytes')
+    res.setHeader('Cache-Policy', 'max-age=3600')
+
+    const fileStream = fs.createReadStream(filePath)
+
+    fileStream.on('open', () => {
+      fileStream.pipe(res)
+    })
+
+    fileStream.on('error', (err) => {
+      console.error(err)
+      next(err)
+    })
+  }
+}
+
+export async function startServer ({ config, arduino, relais, ecol, esub }: Scope) {
   const app = express()
 
   app.set('view engine', 'ejs')
@@ -112,9 +173,32 @@ export async function startServer ({ config, arduino, relais, ecol }: Scope) {
     }
   }))
 
-  app.get('/credits', (req, res) => {
-    res.render('credits', ecol)
-  })
+  app.use('/clip/:id', (req, res, next) => (async () => {
+    const id = req.params.id
+    const filePath = path.join(esub.clipsDir, id + '.mp4')
+
+    await fileStream(filePath, req, res, next)
+  })().catch((err) => next(err)))
+
+  if (config.credits) {
+    app.get('/credits', (req, res, next) => {
+      (async () => {
+        const noScroll = typeof req.query.noScroll !== 'undefined'
+        const mock = typeof req.query.mock !== 'undefined'
+        const unmuted = typeof req.query.unmuted !== 'undefined'
+        const autoplay = typeof req.query.autoplay !== 'undefined'
+        const clips = await esub.getClips()
+        res.render('credits', _.merge({
+          clips,
+          noScroll,
+          unmuted,
+          autoplay,
+          parent: req.hostname
+        }, mock ? mockEvents() : {}, ecol))
+      })().catch((err) => next(err))
+    })
+    console.log('using /credits endpoint')
+  }
 
   if (arduino) {
     app.post('/arduino/:keyword/:command', (req, res) => {
@@ -164,10 +248,10 @@ export async function startServer ({ config, arduino, relais, ecol }: Scope) {
 export async function main () {
   const config = await loadFile<Config>('config.js')
   const esub = new CaesarEventSub(config.eventSub)
-  let relais:Relais
-  let arduino:Arduino
-  let taser:Taser
-  let eventCollector:EventCollector
+  let relais: Relais
+  let arduino: Arduino
+  let taser: Taser
+  let eventCollector: EventCollector
   const queue = new Queue()
 
   if (config.relais) relais = new Relais(config.relais)
@@ -236,7 +320,7 @@ export async function main () {
   })
 
   if (config.api) {
-    await startServer({ config, arduino, relais, ecol: eventCollector })
+    await startServer({ config, arduino, relais, ecol: eventCollector, esub })
   }
 
   await esub.init()

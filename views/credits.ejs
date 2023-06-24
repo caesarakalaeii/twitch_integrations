@@ -1,29 +1,54 @@
 <!DOCTYPE html>
 <html>
-
+<% let msg = 0; %>
+<% function oddEven() { return msg++ % 2 ? 'odd' : 'even' }; %>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Credits</title>
   <link rel="stylesheet" href="/content/style.css" />
-  <noscript>
-    <% let msg = 0; %>
-    <% function oddEven() { return msg++ % 2 ? 'odd' : 'even' }; %>
-  </noscript>
-  <script>
-    function pageScroll() {
-      window.scrollBy(0,1);
-      scrolldelay = setTimeout(pageScroll,10);
-    }
-    window.addEventListener('DOMContentLoaded', function() {
-      pageScroll()
-    })
-  </script>
+  <% if (!noScroll) { %><script src="/content/scroll.js"></script><% } %>
+  <script src="/content/clip.js"></script>
+  <script src="/content/data.js"></script>
 </head>
 
 <body>
-  <div class="header rainbow">Thanks for watching!</div>
+  <% if (clips && clips?.length) { %>
+<!-- BEGIN CLIPS -->
+  <% clips.sort((a, b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime()).forEach((clip, i) => { %>
+    <div class="background-clip">
+      <video poster="<%= clip.thumbnailUrl %>" <% if (!unmuted) { %>muted<% } %> <% if (autoplay) { %>autoplay<% } %>>
+        <source src="/clip/<%= clip.id %>" type="video/mp4"/>
+      </video>
 
-  <% if (newSubs?.length) { %>
+      <div class="info left">
+        <!-- <%- JSON.stringify(clip, null, '  ') %> -->
+        <div class="title">
+          <q><%= clip.title %></q>
+        </div>
+        <div class="created-by line">
+          <img class="avatar" src="<%= clip.creator.profilePictureUrl %>" />
+          <div class="stack">
+            <span class="username"><%= clip.creatorDisplayName %></span>
+            <span data-date="<%= new Date(clip.creationDate).toISOString() %>"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="info right">
+        <div class="game">
+          <div class="title"><%= clip.game.name %></div>
+          <img class="box-art" src="<%= clip.game.boxArtUrl.split(/-\{width\}x\{height\}/i).join('') %>">
+        </div>
+      </div>
+    </div>
+  <% }) %>
+<!-- END CLIPS -->
+  <% } %>
+
+<div id="scroll" class="scroll-container"><div class="scroll-content">
+  <div class="header grad-text">Thanks for watching!</div>
+
+  <% if (gifted && gifted?.length) { %>
   <div class="list_title">Gifted Subs:</div>
   <div class="list_container ranking">
     <% gifted.sort((a, b) => b.amount - a.amount).forEach(function(event) { %>
@@ -38,8 +63,8 @@
     <% }) %>
   </div>
   <% } %>
-
-  <% if (newSubs?.length){%>
+  
+  <% if (newSubs && newSubs?.length){%>
   <div class="list_title">New Subscriptions:</div>
   <div class="list_container" id="new_subs">
     <% newSubs.forEach(function(event) { %>
@@ -51,7 +76,7 @@
     <% }) %>
   </div>
   <% } %>
-
+  
   <% if (currentSubs?.length){%>
   <div class="list_title">Current Subscribers:</div>
   <p class="list_no_break">
@@ -60,8 +85,8 @@
     <% }) %>
   </p>
   <% } %>
-
-  <% if (cheers?.length){%>
+  
+  <% if (cheers && cheers?.length){%>
   <div class="list_title">Cheers:</div>
   <div class="list_container">
     <% cheers.sort((a, b) => b.amount - a.amount).forEach(function(event) { %>
@@ -78,8 +103,8 @@
     <% }) %>
   </div>
   <% } %>
-
-  <% if (raids?.length) { %>
+  
+  <% if (raids && raids?.length) { %>
     <div class="list_title">Thanks to the Raiders:</div>
     <div class="list_container">
       <% raids.sort((a, b) => b.amount - a.amount).forEach(function(event) { %>
@@ -94,8 +119,8 @@
       <% }) %>
     </div>
   <% } %>
-
-  <% if (redeems?.length){%>
+  
+  <% if (redeems && redeems?.length){%>
   <div class="list_title">Redeems:</div>
   <div class="list_container">
     <% redeems.forEach(function(event) { %>
@@ -110,17 +135,19 @@
     <% }) %>
   </div>
   <% } %>
-
-  <% if (follows?.length){%>
+  
+  <% if (follows && follows?.length) { %>
   <div class="list_title">Follows:</div>
   <p class="list_no_break">
     <% follows.forEach(function(user, index) { %>
-      <span class="comma_separated"><%= user %></span>
+    <span class="comma_separated"><%= user %></span>
     <% }) %>
-    </p>
+  </p>
   <% } %>
+  
+  <div class="closure grad-text">Sweet dreams of sour pickles</div>
+</div></div>
 
-  <div class="closure rainbow">Sweet dreams of sour pickles</div>
 </body>
 
 </html>
