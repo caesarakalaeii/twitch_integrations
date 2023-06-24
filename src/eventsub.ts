@@ -11,7 +11,7 @@ import {
   EventSubChannelSubscriptionEvent,
   EventSubChannelSubscriptionGiftEvent,
   EventSubChannelSubscriptionMessageEvent,
-  EventSubListener,
+  EventSubListener as EventSubHttpListener,
   EventSubStreamOnlineEvent,
   EventSubSubscription,
   ReverseProxyAdapter,
@@ -121,7 +121,7 @@ export class CaesarEventSub {
   private userAuth: AuthServer
   public readonly apiClient: ApiClient
   private adapter: ConnectionAdapter
-  public readonly listener: EventSubListener
+  public readonly listener: EventSubHttpListener
   public readonly event: EventEmitter = new EventEmitter()
   private __userId: string
   public get userId () { return this.__userId }
@@ -132,6 +132,8 @@ export class CaesarEventSub {
   public readonly start = new Date()
   public readonly clipsDir: string
 
+
+
   constructor (public readonly config: Config) {
     this.appAuth = new ClientCredentialsAuthProvider(this.config.appAuth.clientId, this.config.appAuth.clientSecret, this.config.appAuth.impliedScopes)
     this.userAuth = new AuthServer(this.config.userAuth)
@@ -141,9 +143,6 @@ export class CaesarEventSub {
     this.clipsDir = this.config.clipsDir || './clips'
     this.clipsLimit = this.config.clipsLimit
 
-    this.apiClient = new ApiClient({
-      authProvider: this.appAuth
-    })
 
     switch (this.config.adapterType) {
       case 'direct':
@@ -153,10 +152,10 @@ export class CaesarEventSub {
         this.adapter = new ReverseProxyAdapter(this.config.adapter)
         break
     }
-    this.listener = new EventSubListener({
-      adapter: this.adapter,
-      apiClient: this.apiClient,
-      secret: this.config.secret
+    this.listener = new EventSubHttpListener({
+      adapter,
+      secret, 
+      apiClient
     })
 
     fs.promises.mkdir(this.clipsDir, {
@@ -192,8 +191,8 @@ export class CaesarEventSub {
   }
 
   async init () {
-    await this.userAuth.getAccessToken()
-    console.log('user token received')
+    const token = await this.userAuth.getAccessToken()
+    console.log('user token received: ', token)
 
     const user = await this.apiClient.users.getUserByName(this.config.user)
     if (!user) throw new Error('can\'t find user by name: ' + this.config.user)

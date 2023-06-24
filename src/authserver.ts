@@ -1,4 +1,5 @@
-import { AccessToken, AuthProvider, AuthProviderTokenType, exchangeCode, RefreshingAuthProvider } from '@twurple/auth'
+import { AccessToken, AccessTokenMaybeWithUserId, AccessTokenWithUserId, AuthProvider, AuthProviderTokenType, exchangeCode, RefreshingAuthProvider } from '@twurple/auth'
+import { UserIdResolvable, UserIdResolvableType } from '@twurple/common'
 import express, { Application } from 'express'
 import _ from 'lodash'
 
@@ -35,6 +36,14 @@ export class AuthServer implements AuthProvider {
     this.app = express()
     this.init()
   }
+
+  getCurrentScopesForUser: (user: UserIdResolvable) => string[]
+  getAccessTokenForUser: (user: UserIdResolvable, scopes?: string[]) => Promise<AccessTokenWithUserId>
+  getAccessTokenForIntent?: (intent: string, scopes?: string[]) => Promise<AccessTokenWithUserId>
+  getAppAccessToken?: (forceNew?: boolean) => Promise<AccessToken>
+  getAnyAccessToken: (user?: UserIdResolvable) => Promise<AccessTokenMaybeWithUserId>
+  refreshAccessTokenForUser?: (user: UserIdResolvable) => Promise<AccessTokenWithUserId>
+  refreshAccessTokenForIntent?: (intent: string) => Promise<AccessTokenWithUserId>
 
   init () {
     const url = new URL(this.config.redirectUri)
@@ -81,14 +90,14 @@ export class AuthServer implements AuthProvider {
 
   getAccessToken: (scopes?: string[]) => Promise<AccessToken> = async (scopes?: string[]) => {
     if (this.refreshingProvider) {
-      return await this.refreshingProvider.getAccessToken(scopes)
+      return await this.refreshingProvider.getAccessTokenForUser({ scopes })
     } else {
       const code = this.config.code || await this.auth(scopes)
       const token = await exchangeCode(this.config.clientId, this.config.clientSecret, code, this.config.redirectUri)
       this.refreshingProvider = new RefreshingAuthProvider({
         clientId: this.config.clientId,
         clientSecret: this.config.clientSecret
-      }, token)
+      })
       return token
     }
   }
