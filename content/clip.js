@@ -1,13 +1,13 @@
 /**
- * 
- * @param {HTMLDivElement} elem 
+ *
+ * @param {HTMLDivElement} elem
  */
-function ClipControl(elem) {
+function ClipControl (elem) {
   this.elem = elem
   /** @type {HTMLVideoElement} */
   this.video = elem.querySelector('video')
 
-  this.toggle = function() {
+  this.toggle = function () {
     this.elem.classList.toggle('visible')
     if (this.elem.classList.contains('visible')) {
       this.video.play()
@@ -24,7 +24,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const clips = []
   document.querySelectorAll('.background-clip').forEach((elem) => clips.push(new ClipControl(elem)))
 
-  let i = 0;
+  let i = 0
   const next = () => {
     const clip = clips[i++ % clips.length]
     clip.video.addEventListener('ended', () => {
