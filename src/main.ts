@@ -47,6 +47,7 @@ export type Config = {
     cheers: boolean,
     currentSubs: boolean,
     raids: boolean,
+    announcedSubs: boolean,
     redeemId: string
   }>
 }
@@ -316,7 +317,11 @@ export async function main () {
   })
 
   esub.on(EventName.LIVE, e => {
-    if (config.credits.clips) queue.add(() => esub.getSubscriptions().then((subs) => eventCollector.addAllSubs(subs)))
+    if (config?.credits?.clips) queue.add(() => esub.getSubscriptions().then((subs) => eventCollector.addAllSubs(subs)))
+  })
+
+  esub.on(EventName.SUBANNOUNCE, e => {
+    if (config?.credits?.announcedSubs) queue.add(() => eventCollector.addSubStreak(e))
   })
 
   if (config.api) {

@@ -10,6 +10,7 @@ import {
   EventSubChannelRedemptionAddEvent,
   EventSubChannelSubscriptionEvent,
   EventSubChannelSubscriptionGiftEvent,
+  EventSubChannelSubscriptionMessageEvent,
   EventSubListener,
   EventSubStreamOnlineEvent,
   EventSubSubscription,
@@ -77,6 +78,7 @@ export enum EventName {
   FOLLOW = 'follow',
   LIVE = 'live',
   RAID = 'raid',
+  SUBANNOUNCE = 'subannounce'
 }
 
 type ClipPick = Pick<HelixClip, 'creationDate' | 'duration' | 'embedUrl' | 'thumbnailUrl' |
@@ -170,6 +172,7 @@ export class CaesarEventSub {
   on (event: EventName.FOLLOW, listener: (event: EventSubChannelFollowEvent) => any): void
   on (event: EventName.LIVE, listener: (event: EventSubStreamOnlineEvent) => any): void
   on (event: EventName.RAID, listener: (event: EventSubChannelRaidEvent) => any): void
+  on (event: EventName.SUBANNOUNCE, listener: (event: EventSubChannelSubscriptionMessageEvent) => any): void
   on (event: EventName, listener: (...args: any[]) => any) {
     this.event.on(event, listener)
   }
@@ -262,6 +265,11 @@ export class CaesarEventSub {
     this.handleSub(EventName.LIVE, () => this.listener.subscribeToStreamOnlineEvents({ id: this.userId }, e => {
       console.log(e.broadcasterDisplayName, 'went live ')
       this.event.emit(EventName.LIVE, e)
+    }))
+
+    this.handleSub(EventName.SUBANNOUNCE, () => this.listener.subscribeToChannelSubscriptionMessageEvents({ id: this.userId }, e => {
+      console.log(e.userDisplayName, 'announced their Tier', +e.tier / 1000, ' Subscription with message', e.messageText) // explaination of tier calculaton in eventcollector
+      this.event.emit(EventName.SUBANNOUNCE)
     }))
   }
 

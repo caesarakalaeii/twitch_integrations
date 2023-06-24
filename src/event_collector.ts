@@ -1,10 +1,17 @@
 import { HelixSubscription } from '@twurple/api'
-import { EventSubChannelCheerEvent, EventSubChannelSubscriptionGiftEvent, EventSubChannelRedemptionAddEvent, EventSubChannelSubscriptionEvent, EventSubChannelFollowEvent, EventSubChannelRaidEvent } from '@twurple/eventsub'
+import { EventSubChannelCheerEvent, EventSubChannelSubscriptionGiftEvent, EventSubChannelRedemptionAddEvent, EventSubChannelSubscriptionEvent, EventSubChannelFollowEvent, EventSubChannelRaidEvent, EventSubChannelSubscriptionMessageEvent } from '@twurple/eventsub'
 import type { PlainClip } from './eventsub'
 
 export type UserEvent = {
     user: string,
     message: string
+}
+export type SubStreak = {
+  user: string,
+  message: string,
+  streak: number,
+  full_amount: number,
+  tier: number
 }
 export type CheerEvent = {
   amount: number,
@@ -30,6 +37,7 @@ export interface StreamEvents{
   redeems: UserEvent[]
   follows: string[]
   raids: RaidEvent[]
+  streaks: SubStreak[]
   clips?: PlainClip[]
 }
 
@@ -41,6 +49,7 @@ export class EventCollector implements StreamEvents {
   redeems: UserEvent[] = []
   follows: string[] = []
   raids: RaidEvent[] = []
+  streaks: SubStreak[] = []
   clips?: PlainClip[] = []
 
   async addSubs (user : string) {
@@ -106,5 +115,22 @@ export class EventCollector implements StreamEvents {
       console.log('Sub Handled: ', sub)
       this.currentSubs.push(sub)
     }
+  }
+
+  async addSubStreak (e : EventSubChannelSubscriptionMessageEvent) {
+    this.streaks.push({
+      user: e.userDisplayName,
+      message: e.messageText,
+      tier: +e.tier / 1000, // somehow converts from String to number, Tiers are given in 1000s, fo whatever reason
+      streak: e.streakMonths,
+      full_amount: e.cumulativeMonths
+    })
+    const testEquals = (userName) => userName === e.userDisplayName
+    // if it exist remove from Sub list
+    let duplicate = this.currentSubs.findIndex(testEquals)
+    if (duplicate > -1) this.currentSubs.splice(duplicate, 1)
+    // if it exists remover from new Subs
+    duplicate = this.newSubs.findIndex(testEquals)
+    if (duplicate > -1) this.newSubs.splice(duplicate, 1)
   }
 }
