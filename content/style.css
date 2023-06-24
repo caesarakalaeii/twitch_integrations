@@ -87,19 +87,43 @@ p, span {
 }
 
 .tier {
-  font-size: 1.1em;
+  font-size: .6em;
   font-weight: bold;
   font-family: 'Comfortaa';
-  min-width: 256px;
-  margin: 0 4px;
 }
 
 .streak {
   font-size: 1.1em;
   font-weight: bold;
   font-family: 'Comfortaa';
-  min-width: 256px;
-  margin: 0 4px;
+}
+.streak_length.less_six {
+  text-shadow:
+     1px -1px 1px gray,
+    -1px  1px 1px gray,
+    -1px -1px 1px gray,
+     1px  1px 1px gray;
+
+}
+
+.streak_length.less_twelve {
+    text-shadow:
+       1px -1px 1px gold,
+      -1px  1px 1px gold,
+      -1px -1px 1px gold,
+       1px  1px 1px gold;
+  
+ 
+}
+
+.streak_length.more_twelve {
+  text-shadow:
+     1px -1px 1px rgb(255, 115, 0),
+    -1px  1px 1px rgb(255, 115, 0),
+    -1px -1px 1px rgb(255, 115, 0),
+     1px  1px 1px rgb(255, 115, 0);
+
+
 }
 
 .message {

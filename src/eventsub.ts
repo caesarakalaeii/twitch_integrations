@@ -348,7 +348,7 @@ export class CaesarEventSub {
       : undefined
 
     const paginator = this.apiClient.clips.getClipsForBroadcasterPaginated({ id: this.userId }, clipFilter)
-    const clips = []
+    let clips = []
     while (clips.length < this.clipsLimit) {
       await paginator.getNext().then((res) => Promise.all(
         res.map((item) => this.clipToPlain(item))))
@@ -356,7 +356,9 @@ export class CaesarEventSub {
     }
 
     const clipPaths = clips.map((clip) => path.join(this.clipsDir, clip.id + '.mp4'))
-
+    if (clips.length > this.clipsLimit) {
+      clips = clips.slice(0, -(clips.length - this.clipsLimit))
+    }
     for (let i = 0; i < clips.length; i++) {
       const clip = clips[i]
       const clipPath = clipPaths[i]

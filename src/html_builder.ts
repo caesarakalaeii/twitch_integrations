@@ -57,7 +57,7 @@ export function mockEvents () {
         user: name,
         full_amount: Math.floor(Math.random() * 30),
         streak: Math.floor(Math.random() * 30),
-        tier: Math.floor(Math.random() * 3),
+        tier: 1 + Math.floor(Math.random() * 2),
         message
       }
       events.streaks.push(streakEvent)

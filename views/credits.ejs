@@ -2,6 +2,15 @@
 <html>
 <% let msg = 0; %>
 <% function oddEven() { return msg++ % 2 ? 'odd' : 'even' }; %>
+<% function streakCalc(streak) {
+  if(streak < 6){
+    return 'less_six'
+  } else if( streak < 12){
+    return 'less_twelve'
+  } else {
+    return 'more_twelve'
+  }
+}; %>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Credits</title>
@@ -75,15 +84,23 @@
         <span class="username">
           <%= event.user %>
         </span>
+        <div class="vert_container">
+          <span class="tier">
+            Tier: <%= event.tier %>
+          </span>
+          <span class="streak">
+            <div class="streak_length<%streakCalc(event.streak)%>">
+              <%= event.streak%>
+            </div>
+            <div class="full_amount">
+              <%event.full_amount%>
+            </div>
+          </span>
+        </div>
         <span class="message <%= oddEven() %>">
           <%= event.message %>
         </span>
-        <span class="tier">
-          <%= event.tier %>
-        </span>
-        <span class="streak">
-          <%= event.streak, (event.full_amount) %>
-        </span>
+        
       </div>
     <% }) %>
     <% newSubs.forEach(function(event) { %>
