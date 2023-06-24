@@ -47,7 +47,7 @@
 
 <div id="scroll" class="scroll-container"><div class="scroll-content">
   <div class="header grad-text">Thanks for watching!</div>
-
+<!-- BEGIN GIFTED -->
   <% if (gifted && gifted?.length) { %>
   <div class="list_title">Gifted Subs:</div>
   <div class="list_container ranking">
@@ -63,10 +63,29 @@
     <% }) %>
   </div>
   <% } %>
-  
-  <% if (newSubs && newSubs?.length){%>
+  <!-- END GIFTED -->
+
+  <!-- BEGIN NEWSUBS -->
+  <% if ((newSubs && newSubs?.length) ||(streaks && streaks?.length) ){%>
   <div class="list_title">New Subscriptions:</div>
   <div class="list_container" id="new_subs">
+    
+    <% streaks.forEach(function(event){ %>
+      <div class="list_item message <%= oddEven() %>">
+        <span class="username">
+          <%= event.user %>
+        </span>
+        <span class="message <%= oddEven() %>">
+          <%= event.message %>
+        </span>
+        <span class="tier">
+          <%= event.tier %>
+        </span>
+        <span class="streak">
+          <%= event.streak, (event.full_amount) %>
+        </span>
+      </div>
+    <% }) %>
     <% newSubs.forEach(function(event) { %>
       <div class="list_item message <%= oddEven() %>">
         <span class="username">
@@ -76,7 +95,9 @@
     <% }) %>
   </div>
   <% } %>
-  
+  <!-- END NEWSUBS -->
+
+  <!-- BEGIN ALLSUBS -->
   <% if (currentSubs?.length){%>
   <div class="list_title">Current Subscribers:</div>
   <p class="list_no_break">
@@ -85,7 +106,10 @@
     <% }) %>
   </p>
   <% } %>
+  <!-- END ALLSUBS -->
   
+
+  <!-- BEGIN CHEERS -->
   <% if (cheers && cheers?.length){%>
   <div class="list_title">Cheers:</div>
   <div class="list_container">
@@ -103,7 +127,9 @@
     <% }) %>
   </div>
   <% } %>
+  <!-- END CHEERS -->
   
+  <!-- BEGIN RAIDS -->
   <% if (raids && raids?.length) { %>
     <div class="list_title">Thanks to the Raiders:</div>
     <div class="list_container">
@@ -119,7 +145,9 @@
       <% }) %>
     </div>
   <% } %>
-  
+  <!-- END RAIDS -->
+
+  <!-- BEGIN REDEEMS -->
   <% if (redeems && redeems?.length){%>
   <div class="list_title">Redeems:</div>
   <div class="list_container">
@@ -135,7 +163,9 @@
     <% }) %>
   </div>
   <% } %>
+  <!-- END REDEEMS -->
   
+  <!-- BEGIN FOLLOWS -->
   <% if (follows && follows?.length) { %>
   <div class="list_title">Follows:</div>
   <p class="list_no_break">
@@ -144,6 +174,7 @@
     <% }) %>
   </p>
   <% } %>
+  <!-- END FOLLOWS -->
   
   <div class="closure grad-text">Sweet dreams of sour pickles</div>
   <div class="credit_where_credit_is_due">Developed by Kouna and CaesarLP</div>

@@ -65,6 +65,7 @@ export type Config = {
   downId :string
   redeemId: string
   clipsDir: string
+  clipsLimit: number
 } & AdapterConfig
 
 export enum EventName {
@@ -127,6 +128,7 @@ export class CaesarEventSub {
   private downId : string
   private upId: string
   private redeemId: string
+  private clipsLimit: number
   public readonly start = new Date()
   public readonly clipsDir: string
 
@@ -137,6 +139,7 @@ export class CaesarEventSub {
     this.downId = this.config.downId
     this.redeemId = this.config.redeemId
     this.clipsDir = this.config.clipsDir || './clips'
+    this.clipsLimit = this.config.clipsLimit
 
     this.apiClient = new ApiClient({
       authProvider: this.appAuth
@@ -279,9 +282,9 @@ export class CaesarEventSub {
 
   userToPlain (user: HelixUser) {
     return {
-      displayName: user.displayName,
-      description: user.description,
-      profilePictureUrl: user.profilePictureUrl
+      displayName: user?.displayName,
+      description: user?.description,
+      profilePictureUrl: user?.profilePictureUrl
     }
   }
 
@@ -334,6 +337,7 @@ export class CaesarEventSub {
   }
 
   async getClips (useTime?: boolean | number | string | Date) {
+    console.log('Collecting clips')
     const clipFilter: HelixClipFilter = useTime
       ? {
           startDate: typeof useTime === 'boolean'
@@ -343,10 +347,13 @@ export class CaesarEventSub {
         }
       : undefined
 
-    const clips = await this.apiClient.clips
-      .getClipsForBroadcasterPaginated({ id: this.userId }, clipFilter)
-      .getAll()
-      .then((clips) => Promise.all(clips.map((clip) => this.clipToPlain(clip))))
+    const paginator = this.apiClient.clips.getClipsForBroadcasterPaginated({ id: this.userId }, clipFilter)
+    const clips = []
+    while (clips.length < this.clipsLimit) {
+      await paginator.getNext().then((res) => Promise.all(
+        res.map((item) => this.clipToPlain(item))))
+        .then((plains) => clips.push(...plains))
+    }
 
     const clipPaths = clips.map((clip) => path.join(this.clipsDir, clip.id + '.mp4'))
 

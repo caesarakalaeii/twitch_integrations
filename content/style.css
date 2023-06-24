@@ -86,6 +86,22 @@ p, span {
   margin: 0 4px;
 }
 
+.tier {
+  font-size: 1.1em;
+  font-weight: bold;
+  font-family: 'Comfortaa';
+  min-width: 256px;
+  margin: 0 4px;
+}
+
+.streak {
+  font-size: 1.1em;
+  font-weight: bold;
+  font-family: 'Comfortaa';
+  min-width: 256px;
+  margin: 0 4px;
+}
+
 .message {
   word-wrap: break-word;
   font-size: 22px;

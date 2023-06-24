@@ -48,7 +48,8 @@ export type Config = {
     currentSubs: boolean,
     raids: boolean,
     announcedSubs: boolean,
-    redeemId: string
+    redeemId: string,
+    clipLimit: number
   }>
 }
 
