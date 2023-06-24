@@ -1,4 +1,4 @@
-import { CheerEvent, GiftEvent, RaidEvent, StreamEvents, UserEvent } from './event_collector'
+import { CheerEvent, GiftEvent, RaidEvent, StreamEvents, SubStreak, UserEvent } from './event_collector'
 import { testMessages, testUsernames } from './test_vars'
 
 // Example usage
@@ -11,10 +11,11 @@ export function mockEvents () {
     redeems: [],
     follows: [],
     raids: [],
+    streaks: [],
     clips: []
   }
   const max = 60
-  const functions = 8
+  const functions = 9
   for (let i = 0; i < max; i++) {
     const name = testUsernames[i % (testUsernames.length - 1)]
     const message = testMessages[i % (testMessages.length - 1)]
@@ -51,6 +52,15 @@ export function mockEvents () {
         amount: Math.floor(Math.random() * 100)
       }
       events.raids.push(raidEvent)
+    } else if (i < 8 * max / functions) {
+      const streakEvent : SubStreak = {
+        user: name,
+        full_amount: Math.floor(Math.random() * 30),
+        streak: Math.floor(Math.random() * 30),
+        tier: Math.floor(Math.random() * 3),
+        message
+      }
+      events.streaks.push(streakEvent)
     } else {
       events.redeems.push(userEvent)
     }
