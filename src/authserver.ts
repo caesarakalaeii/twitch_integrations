@@ -1,5 +1,5 @@
-import { AccessToken, AccessTokenMaybeWithUserId, AccessTokenWithUserId, AuthProvider, AuthProviderTokenType, exchangeCode, RefreshingAuthProvider } from '@twurple/auth'
-import { UserIdResolvable, UserIdResolvableType } from '@twurple/common'
+import { AccessToken, AccessTokenMaybeWithUserId, AccessTokenWithUserId, AuthProvider, exchangeCode, RefreshingAuthProvider } from '@twurple/auth'
+import { UserIdResolvable } from '@twurple/common'
 import express, { Application } from 'express'
 import _ from 'lodash'
 
@@ -8,6 +8,7 @@ export type AuthServerBaseConfig = {
 }
 
 export type AuthServerUserConfig = {
+  userId: UserIdResolvable
   clientId: string
   clientSecret: string
   scopes: string[]
@@ -82,29 +83,29 @@ export class AuthServer implements AuthProvider {
     return this.config.clientId
   }
 
-  tokenType: AuthProviderTokenType = 'user'
   authorizationType?: string
   currentScopes: string[]
 
   private refreshingProvider?: RefreshingAuthProvider
 
-  getAccessToken: (scopes?: string[]) => Promise<AccessToken> = async (scopes?: string[]) => {
+  getAccessToken: (userId?: UserIdResolvable, scopes?: string[]) => Promise<AccessToken> = async (userId?: UserIdResolvable, scopes?: string[]) => {
     if (this.refreshingProvider) {
-      return await this.refreshingProvider.getAccessTokenForUser({ scopes })
+      return await this.refreshingProvider.getAccessTokenForUser(userId, scopes)
     } else {
       const code = this.config.code || await this.auth(scopes)
       const token = await exchangeCode(this.config.clientId, this.config.clientSecret, code, this.config.redirectUri)
       this.refreshingProvider = new RefreshingAuthProvider({
         clientId: this.config.clientId,
-        clientSecret: this.config.clientSecret
+        clientSecret: this.config.clientSecret,
+        onRefresh: () => this.refresh(userId)
       })
       return token
     }
   }
 
-  refresh?: () => Promise<AccessToken> = async () => {
+  refresh?: (userId: UserIdResolvable) => Promise<AccessToken> = async (userId: UserIdResolvable) => {
     if (this.refreshingProvider) {
-      return await this.refreshingProvider.refresh()
+      return await this.refreshingProvider.refreshAccessTokenForUser(userId)
     }
     throw new Error('cannot refresh when there is no token')
   }

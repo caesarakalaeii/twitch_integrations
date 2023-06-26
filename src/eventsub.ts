@@ -1,9 +1,19 @@
-import { ApiClient, HelixClip, HelixClipFilter, HelixGame, HelixUser } from '@twurple/api'
-import { ClientCredentialsAuthProvider } from '@twurple/auth'
+import {
+  ApiClient,
+  HelixClip,
+  HelixClipFilter,
+  HelixGame,
+  HelixUser
+} from '@twurple/api'
 import {
   ConnectionAdapter,
   DirectConnectionAdapter,
   DirectConnectionAdapterConfig,
+  ReverseProxyAdapter,
+  EventSubHttpListener,
+  ReverseProxyAdapterConfig
+} from '@twurple/eventsub-http'
+import {
   EventSubChannelCheerEvent,
   EventSubChannelFollowEvent,
   EventSubChannelRaidEvent,
@@ -11,12 +21,9 @@ import {
   EventSubChannelSubscriptionEvent,
   EventSubChannelSubscriptionGiftEvent,
   EventSubChannelSubscriptionMessageEvent,
-  EventSubListener as EventSubHttpListener,
   EventSubStreamOnlineEvent,
-  EventSubSubscription,
-  ReverseProxyAdapter,
-  ReverseProxyAdapterConfig
-} from '@twurple/eventsub'
+  EventSubSubscription
+} from '@twurple/eventsub-base'
 import { spawn } from 'child_process'
 import EventEmitter from 'events'
 import fs from 'fs'
@@ -25,6 +32,7 @@ import { EOL } from 'os'
 import stringArgv from 'string-argv'
 import { AuthServer, AuthServerConfig } from './authserver'
 import path from 'path'
+import { AppTokenAuthProvider } from '@twurple/auth'
 
 export type DirectAdapterConfig = {
   adapterType: 'direct'
@@ -66,6 +74,7 @@ export type Config = {
   redeemId: string
   clipsDir: string
   clipsLimit: number
+  defaultSecret: string
 } & AdapterConfig
 
 export enum EventName {
@@ -117,7 +126,6 @@ export async function youtubeDLP (url: string, options?: { output?: string, form
 }
 
 export class CaesarEventSub {
-  private appAuth: ClientCredentialsAuthProvider
   private userAuth: AuthServer
   public readonly apiClient: ApiClient
   private adapter: ConnectionAdapter
@@ -131,18 +139,18 @@ export class CaesarEventSub {
   private clipsLimit: number
   public readonly start = new Date()
   public readonly clipsDir: string
-
-
+  private defaultSecret : string
+  private appAuth: AppTokenAuthProvider
 
   constructor (public readonly config: Config) {
-    this.appAuth = new ClientCredentialsAuthProvider(this.config.appAuth.clientId, this.config.appAuth.clientSecret, this.config.appAuth.impliedScopes)
+    this.appAuth = new AppTokenAuthProvider(this.config.appAuth.clientId, this.config.appAuth.clientSecret, this.config.appAuth.impliedScopes)
     this.userAuth = new AuthServer(this.config.userAuth)
     this.upId = this.config.upId
     this.downId = this.config.downId
     this.redeemId = this.config.redeemId
     this.clipsDir = this.config.clipsDir || './clips'
-    this.clipsLimit = this.config.clipsLimit
-
+    this.clipsLimit = this.config.clipsLimit || 10
+    this.defaultSecret = this.config.defaultSecret
 
     switch (this.config.adapterType) {
       case 'direct':
@@ -153,9 +161,9 @@ export class CaesarEventSub {
         break
     }
     this.listener = new EventSubHttpListener({
-      adapter,
-      secret, 
-      apiClient
+      adapter: this.adapter,
+      apiClient: this.apiClient,
+      secret: this.defaultSecret
     })
 
     fs.promises.mkdir(this.clipsDir, {
@@ -203,76 +211,72 @@ export class CaesarEventSub {
     await this.apiClient.eventSub.deleteAllSubscriptions()
     console.log('deleted all subscriptions')
 
-    await this.listener.start()
-      .then(() => console.log('webhook for eventsubs is listening'))
-      .catch(err => { console.log('listener failed to listen', err) })
+    try {
+      await this.listener.start()
+      console.log('listener started')
+    } catch {
+      console.log('couldn\'t start listener')
+    }
 
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
-    await this.handleSub(EventName.SUB_MESSAGE, () => this.listener.subscribeToChannelSubscriptionMessageEvents({ id: this.userId }, e => {
+    await this.listener.onChannelSubscriptionMessage({ id: this.userId }, e => {
+      // do something when a subscription was received
+      console.log(e.userDisplayName, 'announced their Tier', +e.tier / 1000, ' Subscription with message', e.messageText)
+      this.event.emit(EventName.SUBANNOUNCE, e)
+    })
+
+    await this.listener.onChannelSubscription({ id: this.userId }, e => {
       // do something when a subscription was received
       console.log(e.userDisplayName, 'subscribed with a tier', e.tier, 'subscription')
       this.event.emit(EventName.SUB, e)
-    }))
+    })
 
-    await this.handleSub(EventName.SUB, () => this.listener.subscribeToChannelSubscriptionEvents({ id: this.userId }, e => {
-      // do something when a subscription was received
-      console.log(e.userDisplayName, 'subscribed with a tier', e.tier, 'subscription')
-      this.event.emit(EventName.SUB, e)
-    }))
-
-    await this.handleSub(EventName.GIFTSUB, () => this.listener.subscribeToChannelSubscriptionGiftEvents({ id: this.userId }, e => {
+    await this.listener.onChannelSubscriptionGift(this.userId, e => {
       // do something when a sub was gifted
       console.log(e.gifterDisplayName, 'gifted', e.amount || 1, 'tier', e.tier, 'subscriptions')
       this.event.emit(EventName.GIFTSUB, e)
-    }))
+    })
 
-    await this.handleSub(EventName.CHEER, () => this.listener.subscribeToChannelCheerEvents({ id: this.userId }, e => {
+    await this.listener.onChannelCheer({ id: this.userId }, e => {
       // do something when bits have been cheered
       console.log(e.userDisplayName, 'cheered', e.bits, 'with message:', e.message)
       this.event.emit(EventName.CHEER, e)
-    }))
+    })
 
-    if (this.downId) {
-      await this.handleSub(EventName.POINTSDOWN, () => this.listener.subscribeToChannelRedemptionAddEventsForReward({ id: this.userId }, this.downId, e => {
-        console.log(e.userDisplayName, 'redeemed Power Down with this message:', e.input)
-        this.event.emit(EventName.POINTSDOWN, e)
-      }))
+    if (this.downId || this.upId || this.redeemId) {
+      await this.listener.onChannelRedemptionAdd({ id: this.userId }, e => {
+        switch (e.rewardId) {
+          case (this.downId):{
+            console.log(e.userDisplayName, 'redeemed Power Down with this message:', e.input)
+            this.event.emit(EventName.POINTSDOWN, e)
+            break
+          } case (this.upId): {
+            console.log(e.userDisplayName, 'redeemed Power Up with this message:', e.input)
+            this.event.emit(EventName.POINTSUP, e)
+            break
+          } case (this.redeemId): {
+            console.log(e.userDisplayName, 'redeemed Credits with this message:', e.input)
+            this.event.emit(EventName.REDEEM, e)
+            break
+          }
+        }
+      })
     }
-
-    if (this.upId) {
-      await this.handleSub(EventName.POINTSUP, () => this.listener.subscribeToChannelRedemptionAddEventsForReward({ id: this.userId }, this.upId, e => {
-        console.log(e.userDisplayName, 'redeemed Power Up with this message:', e.input)
-        this.event.emit(EventName.POINTSUP, e)
-      }))
-    }
-
-    if (this.redeemId) {
-      await this.handleSub(EventName.REDEEM, () => this.listener.subscribeToChannelRedemptionAddEventsForReward({ id: this.userId }, this.redeemId, e => {
-        console.log(e.userDisplayName, 'redeemed Credits with this message:', e.input)
-        this.event.emit(EventName.REDEEM, e)
-      }))
-    }
-
-    await this.handleSub(EventName.FOLLOW, () => this.listener.subscribeToChannelFollowEvents({ id: this.userId }, e => {
+    await this.listener.onChannelFollow({ id: this.userId }, e => {
       console.log(e.userDisplayName, 'followed')
       this.event.emit(EventName.FOLLOW, e)
-    }))
+    })
 
-    await this.handleSub(EventName.RAID, () => this.listener.subscribeToChannelRaidEventsFrom({ id: this.userId }, e => {
+    await this.listener.onChannelRaidFrom({ id: this.userId }, e => {
       console.log(e.raidingBroadcasterDisplayName, 'raided with: ', e.viewers)
       this.event.emit(EventName.RAID, e)
-    }))
+    })
 
-    this.handleSub(EventName.LIVE, () => this.listener.subscribeToStreamOnlineEvents({ id: this.userId }, e => {
+    this.listener.onStreamOnline({ id: this.userId }, e => {
       console.log(e.broadcasterDisplayName, 'went live ')
       this.event.emit(EventName.LIVE, e)
-    }))
-
-    this.handleSub(EventName.SUBANNOUNCE, () => this.listener.subscribeToChannelSubscriptionMessageEvents({ id: this.userId }, e => {
-      console.log(e.userDisplayName, 'announced their Tier', +e.tier / 1000, ' Subscription with message', e.messageText) // explaination of tier calculaton in eventcollector
-      this.event.emit(EventName.SUBANNOUNCE)
-    }))
+    })
   }
 
   async getSubscriptions () {
