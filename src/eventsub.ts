@@ -175,7 +175,7 @@ export class CustomEventSub {
     this.appAuth = new AppTokenAuthProvider(this.config.appAuth.clientId, this.config.appAuth.clientSecret, this.config.appAuth.impliedScopes)
     this.userAuth = new AuthServer(this.config.userAuth, () => ({ id: this.userId }))
     this.apiClient = new ApiClient({ authProvider: this.appAuth })
-    this.userApiClient = new ApiClient({ authProvider: this.userAuth.refreshingProvider })
+    this.userApiClient = new ApiClient({ authProvider: this.userAuth })
     this.upId = this.config.upId
     this.downId = this.config.downId
     this.redeemId = this.config.redeemId
@@ -230,8 +230,6 @@ export class CustomEventSub {
   }
 
   async init () {
-    const token = await this.userAuth.getAccessToken()
-    console.log('user token received:', token?.scope)
     const appToken = await this.appAuth.getAnyAccessToken()
     console.log('app token received:', appToken?.scope)
 
@@ -240,6 +238,9 @@ export class CustomEventSub {
 
     console.log('id for user', this.config.user, 'is', user.id)
     this.__userId = user.id
+
+    const token = await this.userAuth.getAccessTokenForUser(user)
+    console.log('user token received:', token?.scope)
 
     await this.apiClient.eventSub.deleteAllSubscriptions()
     console.log('deleted all subscriptions')

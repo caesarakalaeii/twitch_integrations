@@ -43,13 +43,54 @@ export class AuthServer implements AuthProvider {
     this.init()
   }
 
-  getCurrentScopesForUser: (user: UserIdResolvable) => string[]
-  getAccessTokenForUser: (user: UserIdResolvable, scopes?: string[]) => Promise<AccessTokenWithUserId>
+  private token: AccessTokenMaybeWithUserId
+
+  private get tokenWithUserId (): AccessTokenWithUserId {
+    return <AccessTokenWithUserId>{
+      accessToken: this.token.accessToken,
+      expiresIn: this.token.expiresIn,
+      obtainmentTimestamp: this.token.obtainmentTimestamp,
+      refreshToken: this.token.refreshToken,
+      scope: this.token.scope,
+      userId: this.token.userId || this.userIdFn()
+    }
+  }
+
+  private get tokenExpired (): boolean {
+    return !this.token || (this.token.obtainmentTimestamp + this.token.expiresIn * 1000 <= new Date().getTime())
+  }
+
+  getCurrentScopesForUser (user: UserIdResolvable): string[] {
+    return this.refreshingProvider.getCurrentScopesForUser(user)
+  }
+
+  async getAccessTokenForUser (user: UserIdResolvable, scopes?: string[]): Promise<AccessTokenWithUserId> {
+    if (!this.token) {
+      const code = this.config.code || await this.auth(scopes)
+      this.token = await exchangeCode(this.config.clientId, this.config.clientSecret, code, this.config.redirectUri)
+      // cannot assign token here, this returns null
+      await this.refreshingProvider.getAccessTokenForUser(user || this.userIdFn(), scopes)
+    } else if (this.tokenExpired) {
+      this.token = await this.refreshingProvider.refreshAccessTokenForUser(user || this.userIdFn())
+    }
+
+    return this.tokenWithUserId
+  }
+
   getAccessTokenForIntent?: (intent: string, scopes?: string[]) => Promise<AccessTokenWithUserId>
   getAppAccessToken?: (forceNew?: boolean) => Promise<AccessToken>
-  getAnyAccessToken: (user?: UserIdResolvable) => Promise<AccessTokenMaybeWithUserId>
-  refreshAccessTokenForUser?: (user: UserIdResolvable) => Promise<AccessTokenWithUserId>
-  refreshAccessTokenForIntent?: (intent: string) => Promise<AccessTokenWithUserId>
+
+  async getAnyAccessToken (user?: UserIdResolvable): Promise<AccessTokenMaybeWithUserId> {
+    return this.getAccessTokenForUser(user)
+  }
+
+  async refreshAccessTokenForUser (user: UserIdResolvable): Promise<AccessTokenWithUserId> {
+    return await this.refreshingProvider.refreshAccessTokenForUser(user)
+  }
+
+  async refreshAccessTokenForIntent (intent: string): Promise<AccessTokenWithUserId> {
+    return await this.refreshingProvider.refreshAccessTokenForIntent(intent)
+  }
 
   init () {
     const url = new URL(this.config.redirectUri)
@@ -92,16 +133,6 @@ export class AuthServer implements AuthProvider {
   currentScopes: string[]
 
   public refreshingProvider?: RefreshingAuthProvider
-
-  getAccessToken: (scopes?: string[]) => Promise<AccessToken> = async (scopes?: string[]) => {
-    if (this.refreshingProvider) {
-      return await this.refreshingProvider.getAccessTokenForUser(this.userIdFn(), scopes)
-    } else {
-      const code = this.config.code || await this.auth(scopes)
-      const token = await exchangeCode(this.config.clientId, this.config.clientSecret, code, this.config.redirectUri)
-      return token
-    }
-  }
 
   refresh?: (userId: UserIdResolvable) => Promise<AccessToken> = async (userId: UserIdResolvable) => {
     if (this.refreshingProvider) {
