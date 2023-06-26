@@ -3,6 +3,7 @@ import {
   HelixClip,
   HelixClipFilter,
   HelixGame,
+  HelixSubscription,
   HelixUser
 } from '@twurple/api'
 import {
@@ -33,6 +34,7 @@ import stringArgv from 'string-argv'
 import { AuthServer, AuthServerConfig } from './authserver'
 import path from 'path'
 import { AppTokenAuthProvider } from '@twurple/auth'
+import { HelixEventSubSubscriptionData, HelixEventSubSubscriptionStatus } from '@twurple/api/lib/interfaces/endpoints/eventSub.external'
 
 export type DirectAdapterConfig = {
   adapterType: 'direct'
@@ -64,8 +66,7 @@ export type Config = {
   secret: string
   /** if you don't want to have your webhook listen directly to 443 (I'd recommend some apache2 proxy in front of this) */
   port?: number
-  /** your user id
-   * @see https://google.com/search?q=twitch+user+id */
+  /** your User  name **/
   user: string
   appAuth: ClientAuth
   userAuth: AuthServerConfig
@@ -87,8 +88,7 @@ export enum EventName {
   REDEEM = 'redeem',
   FOLLOW = 'follow',
   LIVE = 'live',
-  RAID = 'raid',
-  SUBANNOUNCE = 'subannounce'
+  RAID = 'raid'
 }
 
 type ClipPick = Pick<HelixClip, 'creationDate' | 'duration' | 'embedUrl' | 'thumbnailUrl' |
@@ -96,6 +96,13 @@ type ClipPick = Pick<HelixClip, 'creationDate' | 'duration' | 'embedUrl' | 'thum
   'broadcasterId' | 'id' | 'vodOffset'>
 type UserPick = Pick<HelixUser, 'displayName' | 'description' | 'profilePictureUrl'>
 type GamePick = Pick<HelixGame, 'name' | 'boxArtUrl'>
+
+type PlainSub = {
+  user: UserPick
+  tier: number
+  gifter: UserPick
+
+}
 
 export type PlainClip = {
   game: GamePick,
@@ -125,7 +132,7 @@ export async function youtubeDLP (url: string, options?: { output?: string, form
   })
 }
 
-export class CaesarEventSub {
+export class CustomEventSub {
   private userAuth: AuthServer
   public readonly apiClient: ApiClient
   private adapter: ConnectionAdapter
@@ -145,6 +152,7 @@ export class CaesarEventSub {
   constructor (public readonly config: Config) {
     this.appAuth = new AppTokenAuthProvider(this.config.appAuth.clientId, this.config.appAuth.clientSecret, this.config.appAuth.impliedScopes)
     this.userAuth = new AuthServer(this.config.userAuth)
+    this.apiClient = new ApiClient({ authProvider: this.appAuth })
     this.upId = this.config.upId
     this.downId = this.config.downId
     this.redeemId = this.config.redeemId
@@ -175,6 +183,7 @@ export class CaesarEventSub {
 
   on (event: EventName.GIFTSUB, listener: (event: EventSubChannelSubscriptionGiftEvent) => any): void
   on (event: EventName.SUB, listener: (event: EventSubChannelSubscriptionEvent) => any): void
+  on (event: EventName.SUB_MESSAGE, listener: (event: EventSubChannelSubscriptionMessageEvent) => any): void
   on (event: EventName.CHEER, listener: (event: EventSubChannelCheerEvent) => any): void
   on (event: EventName.POINTSUP, listener: (event: EventSubChannelRedemptionAddEvent) => any): void
   on (event: EventName.POINTSDOWN, listener: (event: EventSubChannelRedemptionAddEvent) => any): void
@@ -182,12 +191,11 @@ export class CaesarEventSub {
   on (event: EventName.FOLLOW, listener: (event: EventSubChannelFollowEvent) => any): void
   on (event: EventName.LIVE, listener: (event: EventSubStreamOnlineEvent) => any): void
   on (event: EventName.RAID, listener: (event: EventSubChannelRaidEvent) => any): void
-  on (event: EventName.SUBANNOUNCE, listener: (event: EventSubChannelSubscriptionMessageEvent) => any): void
   on (event: EventName, listener: (...args: any[]) => any) {
     this.event.on(event, listener)
   }
 
-  private async handleSub (name: string, fn: () => Promise<EventSubSubscription>) {
+  private async handleSub (name: string, fn: () => EventSubSubscription) {
     try {
       const sub = await fn()
       console.log('eventsub %s initialized', name)
@@ -220,67 +228,72 @@ export class CaesarEventSub {
 
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
-    await this.listener.onChannelSubscriptionMessage({ id: this.userId }, e => {
+    this.handleSub('subMessage', () => this.listener.onChannelSubscriptionMessage({ id: this.userId }, e => {
       // do something when a subscription was received
       console.log(e.userDisplayName, 'announced their Tier', +e.tier / 1000, ' Subscription with message', e.messageText)
-      this.event.emit(EventName.SUBANNOUNCE, e)
-    })
+      this.event.emit(EventName.SUB_MESSAGE, e)
+    }))
 
-    await this.listener.onChannelSubscription({ id: this.userId }, e => {
+    this.handleSub('sub', () => this.listener.onChannelSubscription({ id: this.userId }, e => {
       // do something when a subscription was received
       console.log(e.userDisplayName, 'subscribed with a tier', e.tier, 'subscription')
       this.event.emit(EventName.SUB, e)
-    })
+    }))
 
-    await this.listener.onChannelSubscriptionGift(this.userId, e => {
+    this.handleSub('gift', () => this.listener.onChannelSubscriptionGift(this.userId, e => {
       // do something when a sub was gifted
-      console.log(e.gifterDisplayName, 'gifted', e.amount || 1, 'tier', e.tier, 'subscriptions')
+      console.log(e.gifterDisplayName, 'gifted', e.amount || 1, 'tier', +e.tier / 1000, 'subscriptions')
       this.event.emit(EventName.GIFTSUB, e)
-    })
+    }))
 
-    await this.listener.onChannelCheer({ id: this.userId }, e => {
+    this.handleSub('cheer', () => this.listener.onChannelCheer({ id: this.userId }, e => {
       // do something when bits have been cheered
       console.log(e.userDisplayName, 'cheered', e.bits, 'with message:', e.message)
       this.event.emit(EventName.CHEER, e)
-    })
+    }))
 
-    if (this.downId || this.upId || this.redeemId) {
-      await this.listener.onChannelRedemptionAdd({ id: this.userId }, e => {
-        switch (e.rewardId) {
-          case (this.downId):{
-            console.log(e.userDisplayName, 'redeemed Power Down with this message:', e.input)
-            this.event.emit(EventName.POINTSDOWN, e)
-            break
-          } case (this.upId): {
-            console.log(e.userDisplayName, 'redeemed Power Up with this message:', e.input)
-            this.event.emit(EventName.POINTSUP, e)
-            break
-          } case (this.redeemId): {
-            console.log(e.userDisplayName, 'redeemed Credits with this message:', e.input)
-            this.event.emit(EventName.REDEEM, e)
-            break
-          }
-        }
-      })
-    }
-    await this.listener.onChannelFollow({ id: this.userId }, e => {
+    this.handleSub('redeem', () => this.listener.onChannelRedemptionAddForReward({ id: this.userId }, this.redeemId, e => {
+      console.log(e.userDisplayName, 'redeemed Credits with this message:', e.input)
+      this.event.emit(EventName.REDEEM, e)
+    }))
+
+    this.handleSub('pointsDown', () => this.listener.onChannelRedemptionAddForReward({ id: this.userId }, this.downId, e => {
+      console.log(e.userDisplayName, 'redeemed Power Down with this message:', e.input)
+      this.event.emit(EventName.POINTSDOWN, e)
+    }))
+
+    this.handleSub('pointsUp', () => this.listener.onChannelRedemptionAddForReward({ id: this.userId }, this.upId, e => {
+      console.log(e.userDisplayName, 'redeemed Power Up with this message:', e.input)
+      this.event.emit(EventName.POINTSUP, e)
+    }))
+
+    this.handleSub('follow', () => this.listener.onChannelFollow({ id: this.userId }, { id: this.userId }, e => {
       console.log(e.userDisplayName, 'followed')
       this.event.emit(EventName.FOLLOW, e)
-    })
+    }))
 
-    await this.listener.onChannelRaidFrom({ id: this.userId }, e => {
+    this.handleSub('raid', () => this.listener.onChannelRaidFrom({ id: this.userId }, e => {
       console.log(e.raidingBroadcasterDisplayName, 'raided with: ', e.viewers)
       this.event.emit(EventName.RAID, e)
-    })
+    }))
 
-    this.listener.onStreamOnline({ id: this.userId }, e => {
+    this.handleSub('live', () => this.listener.onStreamOnline({ id: this.userId }, e => {
       console.log(e.broadcasterDisplayName, 'went live ')
       this.event.emit(EventName.LIVE, e)
-    })
+    }))
   }
 
   async getSubscriptions () {
     return await this.apiClient.subscriptions.getSubscriptionsPaginated({ id: this.userId }).getAll()
+  }
+
+  async subToPlain (sub : HelixSubscription | EventSubChannelSubscriptionMessageEvent) {
+    const s: PlainSub = {
+      user: await sub.getUser().then((user) => this.userToPlain(user)),
+      tier: sub?.tier,
+      gifter: sub.isGift && await sub.getGifter().then((gifter) => this.userToPlain(gifter))
+
+    }
   }
 
   userToPlain (user: HelixUser) {
@@ -397,11 +410,21 @@ export class CaesarEventSub {
 
     const test = await sub.getCliTestCommand()
     const [cmd, ...cmdArgs] = stringArgv(test)
+    if (name === EventName.FOLLOW) {
+      cmdArgs.push('-v', '2')
+    }
     await new Promise<number>((resolve, reject) => {
       const cp = spawn(cmd, cmdArgs, { stdio: 'inherit' })
       cp.on('exit', code => resolve(code))
       cp.on('error', err => reject(err))
     })
+    console.log('tested ', name, 'successfully')
+  }
+
+  async testAll () {
+    for (const name of this.subscriptions.keys()) {
+      this.testSub(name)
+    }
   }
 
   async stop () {
