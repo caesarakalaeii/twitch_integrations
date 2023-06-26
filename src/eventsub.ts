@@ -330,7 +330,7 @@ export class CustomEventSub {
       _.merge(all.get(s.userId), await this.subToPlain(s.event, {}))
     }
 
-    return all
+    return Array.from(all.values())
   }
 
   async subToPlain (
