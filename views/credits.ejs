@@ -161,7 +161,7 @@
   <% if (subs && subs?.length) { %>
   <div class="list_title">Subscriptions</div>
   <div class="list_container">
-    <% for (const sub of subs) { %>
+    <% for (const sub of subs.filter((sub => sub.broadcasterId !== sub.userId))) { %>
       <!-- <%- JSON.stringify(s, null, '  ') %> -->
       <div class="list_item">
         <span class="username"><%= sub.userDisplayName %></span>
