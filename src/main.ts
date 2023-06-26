@@ -14,7 +14,7 @@ import { CustomEventSub, EventName, Config as CaesarEventSubConfig } from './eve
 import { Queue } from './queue'
 import { Relais, RelaisConfig } from './relais'
 import { Taser, TaserConfig } from './taser'
-import { mockEvents } from './html_builder'
+import { mockEvents, mockSubs } from './html_builder'
 
 type Credentials = {
   username: string
@@ -189,7 +189,7 @@ export async function startServer ({ config, arduino, relais, ecol, esub }: Scop
         const unmuted = typeof req.query.unmuted !== 'undefined'
         const autoplay = typeof req.query.autoplay !== 'undefined'
         const clips = await esub.getClips()
-        const subs = await esub.joinSubs(ecol)
+        const subs = mock ? mockSubs() : await esub.joinSubs(ecol)
 
         res.render('credits', _.merge({
           clips,
