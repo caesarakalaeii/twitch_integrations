@@ -32,8 +32,13 @@ export class AuthServer implements AuthProvider {
   private config: AuthServerConfig
   private port: number
 
-  constructor (config: Partial<AuthServerConfig>) {
+  constructor (config: Partial<AuthServerConfig>, private readonly userIdFn: () => UserIdResolvable) {
     this.config = _.merge(defaultConfig, config) as unknown as AuthServerConfig
+    this.refreshingProvider = new RefreshingAuthProvider({
+      clientId: this.config.clientId,
+      clientSecret: this.config.clientSecret,
+      onRefresh: () => this.refresh(userIdFn())
+    })
     this.app = express()
     this.init()
   }
@@ -86,19 +91,14 @@ export class AuthServer implements AuthProvider {
   authorizationType?: string
   currentScopes: string[]
 
-  private refreshingProvider?: RefreshingAuthProvider
+  public refreshingProvider?: RefreshingAuthProvider
 
-  getAccessToken: (userId?: UserIdResolvable, scopes?: string[]) => Promise<AccessToken> = async (userId?: UserIdResolvable, scopes?: string[]) => {
+  getAccessToken: (scopes?: string[]) => Promise<AccessToken> = async (scopes?: string[]) => {
     if (this.refreshingProvider) {
-      return await this.refreshingProvider.getAccessTokenForUser(userId, scopes)
+      return await this.refreshingProvider.getAccessTokenForUser(this.userIdFn(), scopes)
     } else {
       const code = this.config.code || await this.auth(scopes)
       const token = await exchangeCode(this.config.clientId, this.config.clientSecret, code, this.config.redirectUri)
-      this.refreshingProvider = new RefreshingAuthProvider({
-        clientId: this.config.clientId,
-        clientSecret: this.config.clientSecret,
-        onRefresh: () => this.refresh(userId)
-      })
       return token
     }
   }

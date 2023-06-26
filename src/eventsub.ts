@@ -6,8 +6,8 @@ import {
   HelixSubscription,
   HelixUser
 } from '@twurple/api'
-import { ParsedMessagePart } from '@twurple/common/lib/emotes/ParsedMessagePart'
 import { AppTokenAuthProvider } from '@twurple/auth'
+import { ParsedMessagePart } from '@twurple/common/lib/emotes/ParsedMessagePart'
 import {
   EventSubChannelCheerEvent,
   EventSubChannelFollowEvent,
@@ -154,8 +154,10 @@ export async function youtubeDLP (url: string, options?: { output?: string, form
 }
 
 export class CustomEventSub {
+  private appAuth: AppTokenAuthProvider
   private userAuth: AuthServer
   public readonly apiClient: ApiClient
+  public readonly userApiClient: ApiClient
   private adapter: ConnectionAdapter
   public readonly listener: EventSubHttpListener
   public readonly event: EventEmitter = new EventEmitter()
@@ -168,12 +170,12 @@ export class CustomEventSub {
   public readonly start = new Date()
   public readonly clipsDir: string
   private defaultSecret: string
-  private appAuth: AppTokenAuthProvider
 
   constructor (public readonly config: Config) {
     this.appAuth = new AppTokenAuthProvider(this.config.appAuth.clientId, this.config.appAuth.clientSecret, this.config.appAuth.impliedScopes)
-    this.userAuth = new AuthServer(this.config.userAuth)
+    this.userAuth = new AuthServer(this.config.userAuth, () => ({ id: this.userId }))
     this.apiClient = new ApiClient({ authProvider: this.appAuth })
+    this.userApiClient = new ApiClient({ authProvider: this.userAuth.refreshingProvider })
     this.upId = this.config.upId
     this.downId = this.config.downId
     this.redeemId = this.config.redeemId
@@ -229,7 +231,9 @@ export class CustomEventSub {
 
   async init () {
     const token = await this.userAuth.getAccessToken()
-    console.log('user token received: ', token)
+    console.log('user token received:', token?.scope)
+    const appToken = await this.appAuth.getAnyAccessToken()
+    console.log('app token received:', appToken?.scope)
 
     const user = await this.apiClient.users.getUserByName(this.config.user)
     if (!user) throw new Error('can\'t find user by name: ' + this.config.user)
@@ -305,7 +309,7 @@ export class CustomEventSub {
   }
 
   async getSubscriptions () {
-    return await this.apiClient.subscriptions.getSubscriptionsPaginated({ id: this.userId })
+    return await this.userApiClient.subscriptions.getSubscriptionsPaginated({ id: this.userId })
       .getAll()
       .then((subs) => Promise.all(subs.map(sub => this.subToPlain(sub))))
       .catch((err) => {
