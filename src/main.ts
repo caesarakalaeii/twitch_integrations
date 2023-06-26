@@ -8,10 +8,9 @@ import _ from 'lodash'
 import { lookup } from 'mime-types'
 import path from 'path'
 import repl from 'repl'
-import { CaesarEventSubConfig } from '.'
 import { Arduino, ArduinoConfig, Keyword } from './arduino'
 import { EventCollector } from './event_collector'
-import { CustomEventSub, EventName } from './eventsub'
+import { CustomEventSub, EventName, Config as CaesarEventSubConfig } from './eventsub'
 import { Queue } from './queue'
 import { Relais, RelaisConfig } from './relais'
 import { Taser, TaserConfig } from './taser'
@@ -190,8 +189,11 @@ export async function startServer ({ config, arduino, relais, ecol, esub }: Scop
         const unmuted = typeof req.query.unmuted !== 'undefined'
         const autoplay = typeof req.query.autoplay !== 'undefined'
         const clips = await esub.getClips()
+        const subs = await esub.joinSubs(ecol)
+
         res.render('credits', _.merge({
           clips,
+          subs,
           noScroll,
           unmuted,
           autoplay,
@@ -315,10 +317,6 @@ export async function main () {
 
   esub.on(EventName.RAID, e => {
     if (config?.credits?.raids) queue.add(() => eventCollector.addRaid(e))
-  })
-
-  esub.on(EventName.LIVE, e => {
-    if (config?.credits?.clips) queue.add(() => esub.getSubscriptions().then((subs) => eventCollector.addAllSubs(subs)))
   })
 
   if (config.api) {

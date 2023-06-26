@@ -1,18 +1,17 @@
 import { CheerEvent, GiftEvent, RaidEvent, StreamEvents, SubStreak, UserEvent } from './event_collector'
 import { testMessages, testUsernames } from './test_vars'
+import crypto from 'crypto'
 
 // Example usage
 export function mockEvents () {
   const events: StreamEvents = {
     newSubs: [],
-    currentSubs: [],
     gifted: [],
     cheers: [],
     redeems: [],
     follows: [],
     raids: [],
-    streaks: [],
-    clips: []
+    streaks: []
   }
   const max = 60
   const functions = 9
@@ -24,9 +23,7 @@ export function mockEvents () {
       message
     }
 
-    if (i < 2 * max / functions) {
-      events.currentSubs.push(name)
-    } else if (i < 3 * max / functions) {
+    if (i < 3 * max / functions) {
       events.follows.push(name)
     } else if (i < 4 * max / functions) {
       events.newSubs.push(name)
@@ -53,19 +50,20 @@ export function mockEvents () {
       }
       events.raids.push(raidEvent)
     } else if (i < 8 * max / functions) {
-      const streakEvent : SubStreak = {
+      const streakEvent: SubStreak = {
         user: name,
+        userId: crypto.randomUUID(),
         full_amount: Math.floor(Math.random() * 30),
         streak: Math.floor(Math.random() * 30),
         tier: 1 + Math.floor(Math.random() * 2),
-        message
+        message,
+        event: null
       }
       events.streaks.push(streakEvent)
     } else {
       events.redeems.push(userEvent)
     }
   }
-  events.clips = []
 
   return events
 }

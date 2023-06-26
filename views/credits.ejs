@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <% let msg = 0; %>
-<% function oddEven() { return msg++ % 2 ? 'odd' : 'even' }; %>
+<% function oddEven() { return msg++ % 2 ? 'odd': 'even' }; %>
 <% function streakCalc(streak) {
   if(streak < 6){
     return 'less_six'
@@ -21,38 +21,43 @@
 </head>
 
 <body>
-  <% if (clips && clips?.length) { %>
+
 <!-- BEGIN CLIPS -->
-  <% clips.sort((a, b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime()).forEach((clip, i) => { %>
-    <div class="background-clip">
-      <video poster="<%= clip.thumbnailUrl %>" <% if (!unmuted) { %>muted<% } %> <% if (autoplay) { %>autoplay<% } %>>
-        <source src="/clip/<%= clip.id %>" type="video/mp4"/>
-      </video>
+<% if (clips && clips?.length) { %>
+<% clips.sort((a, b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime()).forEach((clip, i) => { %>
+  <div class="clip controller" data-clip-id="<%= clip.id %>"></div>
 
-      <div class="info left">
-        <!-- <%- JSON.stringify(clip, null, '  ') %> -->
-        <div class="title">
-          <q><%= clip.title %></q>
-        </div>
-        <div class="created-by line">
-          <img class="avatar" src="<%= clip.creator.profilePictureUrl %>" />
-          <div class="stack">
-            <span class="username"><%= clip.creatorDisplayName %></span>
-            <span data-date="<%= new Date(clip.creationDate).toISOString() %>"></span>
-          </div>
-        </div>
+  <div class="clip fixed background" data-clip-id="<%= clip.id %>">
+    <video poster="<%= clip.thumbnailUrl %>" <% if (!unmuted) { %>muted<% } %> <% if (autoplay) { %>autoplay<% } %>>
+      <source src="/clip/<%= clip.id %>" type="video/mp4"/>
+    </video>
+  </div>
+
+  <div class="clip fixed foreground" data-clip-id="<%= clip.id %>">
+    <div class="info left">
+      <!-- <%- JSON.stringify(clip, null, '  ') %> -->
+      <div class="title">
+        <q><%= clip.title %></q>
       </div>
-
-      <div class="info right">
-        <div class="game">
-          <div class="title"><%= clip.game.name %></div>
-          <img class="box-art" src="<%= clip.game.boxArtUrl.split(/-\{width\}x\{height\}/i).join('') %>">
+      <div class="created-by line">
+        <img class="avatar" src="<%= clip.creator.profilePictureUrl %>" />
+        <div class="stack">
+          <span class="username"><%= clip.creatorDisplayName %></span>
+          <span data-date="<%= new Date(clip.creationDate).toISOString() %>"></span>
         </div>
       </div>
     </div>
-  <% }) %>
+
+    <div class="info right">
+      <div class="game">
+        <div class="title"><%= clip.game.name %></div>
+        <img class="box-art" src="<%= clip.game.boxArtUrl.split(/-\{width\}x\{height\}/i).join('') %>">
+      </div>
+    </div>
+  </div>
+<% }) %>
+<% } %>
 <!-- END CLIPS -->
-  <% } %>
 
 <div id="scroll" class="scroll-container"><div class="scroll-content">
   <div class="header grad-text">Thanks for watching!</div>
@@ -72,9 +77,9 @@
     <% }) %>
   </div>
   <% } %>
-  <!-- END GIFTED -->
+<!-- END GIFTED -->
 
-  <!-- BEGIN NEWSUBS -->
+<!-- BEGIN NEWSUBS -->
   <% if ((newSubs && newSubs?.length) ||(streaks && streaks?.length) ){%>
   <div class="list_title">New Subscriptions:</div>
   <div class="list_container" id="new_subs">
@@ -112,21 +117,9 @@
     <% }) %>
   </div>
   <% } %>
-  <!-- END NEWSUBS -->
+<!-- END NEWSUBS -->
 
-  <!-- BEGIN ALLSUBS -->
-  <% if (currentSubs?.length){%>
-  <div class="list_title">Current Subscribers:</div>
-  <p class="list_no_break">
-    <% currentSubs.forEach(function(user, index) { %>
-      <span class="comma_separated"><%= user %></span>
-    <% }) %>
-  </p>
-  <% } %>
-  <!-- END ALLSUBS -->
-  
-
-  <!-- BEGIN CHEERS -->
+<!-- BEGIN CHEERS -->
   <% if (cheers && cheers?.length){%>
   <div class="list_title">Cheers:</div>
   <div class="list_container">
@@ -144,9 +137,9 @@
     <% }) %>
   </div>
   <% } %>
-  <!-- END CHEERS -->
+<!-- END CHEERS -->
   
-  <!-- BEGIN RAIDS -->
+<!-- BEGIN RAIDS -->
   <% if (raids && raids?.length) { %>
     <div class="list_title">Thanks to the Raiders:</div>
     <div class="list_container">
@@ -162,10 +155,27 @@
       <% }) %>
     </div>
   <% } %>
-  <!-- END RAIDS -->
+<!-- END RAIDS -->
 
-  <!-- BEGIN REDEEMS -->
-  <% if (redeems && redeems?.length){%>
+<!-- BEGIN FULL SUBS -->
+  <% if (subs && subs?.length) { %>
+  <div class="list_title">Subscriptions</div>
+  <div class="list_container">
+    <% for (const sub of subs) { %>
+      <!-- <%- JSON.stringify(s, null, '  ') %> -->
+      <div class="list_item">
+        <span class="username"><%= sub.userDisplayName %></span>
+        <% if (sub.isNew) { %><span class="new_badge">NEW</span><% } %>
+        <% if (sub.isGift) { %><span class="gifter username"><%= sub.gifterDisplayName %></span><% } %>
+        <% if (sub.durationMonths) { %><span class="duration months"><%= sub.durationMonths %></span><% } %> 
+      </div>
+    <% } %>
+  </div>
+  <% } %>
+<!-- END FULL SUBS -->
+
+<!-- BEGIN REDEEMS -->
+  <% if (redeems && redeems?.length) {%>
   <div class="list_title">Redeems:</div>
   <div class="list_container">
     <% redeems.forEach(function(event) { %>
@@ -180,9 +190,9 @@
     <% }) %>
   </div>
   <% } %>
-  <!-- END REDEEMS -->
+<!-- END REDEEMS -->
   
-  <!-- BEGIN FOLLOWS -->
+<!-- BEGIN FOLLOWS -->
   <% if (follows && follows?.length) { %>
   <div class="list_title">Follows:</div>
   <p class="list_no_break">
@@ -191,7 +201,7 @@
     <% }) %>
   </p>
   <% } %>
-  <!-- END FOLLOWS -->
+<!-- END FOLLOWS -->
   
   <div class="closure grad-text">Sweet dreams of sour pickles</div>
   <div class="credit_where_credit_is_due">Developed by Kouna and CaesarLP</div>

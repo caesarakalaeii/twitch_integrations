@@ -24,7 +24,7 @@ export class Arduino {
 
   private send (type: Keyword, active: boolean) {
     return new Promise<void>((resolve, reject) => {
-      const data = Buffer.from([(this.config.action[type] << 1) + (active ? 1 : 0)])
+      const data = Buffer.from([(this.config.action[type] << 1) + (active ? 1: 0)])
       if (this.config.log) console.log('writing', data, 'to serial')
       if (this.serial) {
         this.serial.write(data, (err) => {

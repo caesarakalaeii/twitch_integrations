@@ -1,17 +1,17 @@
-import { HelixSubscription } from '@twurple/api'
 import { EventSubChannelCheerEvent, EventSubChannelSubscriptionGiftEvent, EventSubChannelRedemptionAddEvent, EventSubChannelSubscriptionEvent, EventSubChannelFollowEvent, EventSubChannelRaidEvent, EventSubChannelSubscriptionMessageEvent } from '@twurple/eventsub-base'
-import type { PlainClip } from './eventsub'
 
 export type UserEvent = {
-    user: string,
-    message: string
+  user: string,
+  message: string
 }
 export type SubStreak = {
   user: string,
+  userId: string,
   message: string,
   streak: number,
   full_amount: number,
-  tier: number
+  tier: number,
+  event: EventSubChannelSubscriptionMessageEvent
 }
 export type CheerEvent = {
   amount: number,
@@ -31,30 +31,22 @@ export type RaidEvent = {
 
 export interface StreamEvents{
   newSubs: string[]
-  currentSubs: string[]
   gifted: GiftEvent[]
   cheers: CheerEvent[]
   redeems: UserEvent[]
   follows: string[]
   raids: RaidEvent[]
   streaks: SubStreak[]
-  clips?: PlainClip[]
 }
 
 export class EventCollector implements StreamEvents {
   newSubs: string[] = []
-  currentSubs: string[] = []
   gifted: GiftEvent[] = []
   cheers: CheerEvent[] = []
   redeems: UserEvent[] = []
   follows: string[] = []
   raids: RaidEvent[] = []
   streaks: SubStreak[] = []
-  clips?: PlainClip[] = []
-
-  async addSubs (user : string) {
-    this.currentSubs.push(user)
-  }
 
   async addGifted (e: EventSubChannelSubscriptionGiftEvent) {
     const gift = this.gifted.find(item => item.user === e.gifterDisplayName)
@@ -72,7 +64,7 @@ export class EventCollector implements StreamEvents {
     this.follows.push(e.userDisplayName)
   }
 
-  async addNewSub (e : EventSubChannelSubscriptionEvent) {
+  async addNewSub (e: EventSubChannelSubscriptionEvent) {
     this.newSubs.push(e.userDisplayName)
   }
 
@@ -110,27 +102,15 @@ export class EventCollector implements StreamEvents {
     })
   }
 
-  async addAllSubs (subs: HelixSubscription[]) {
-    for (const sub in subs) {
-      console.log('Sub Handled: ', sub)
-      this.currentSubs.push(sub)
-    }
-  }
-
-  async addSubStreak (e : EventSubChannelSubscriptionMessageEvent) {
+  async addSubStreak (e: EventSubChannelSubscriptionMessageEvent) {
     this.streaks.push({
       user: e.userDisplayName,
+      userId: e.userId,
       message: e.messageText,
-      tier: +e.tier / 1000, // somehow converts from String to number, Tiers are given in 1000s, fo whatever reason
+      tier: Number(e.tier) / 1000,
       streak: e.streakMonths,
-      full_amount: e.cumulativeMonths
+      full_amount: e.cumulativeMonths,
+      event: e
     })
-    const testEquals = (userName) => userName === e.userDisplayName
-    // if it exist remove from Sub list
-    let duplicate = this.currentSubs.findIndex(testEquals)
-    if (duplicate > -1) this.currentSubs.splice(duplicate, 1)
-    // if it exists remover from new Subs
-    duplicate = this.newSubs.findIndex(testEquals)
-    if (duplicate > -1) this.newSubs.splice(duplicate, 1)
   }
 }

@@ -6,14 +6,8 @@ import {
   HelixSubscription,
   HelixUser
 } from '@twurple/api'
-import {
-  ConnectionAdapter,
-  DirectConnectionAdapter,
-  DirectConnectionAdapterConfig,
-  ReverseProxyAdapter,
-  EventSubHttpListener,
-  ReverseProxyAdapterConfig
-} from '@twurple/eventsub-http'
+import { ParsedMessagePart } from '@twurple/common/lib/emotes/ParsedMessagePart'
+import { AppTokenAuthProvider } from '@twurple/auth'
 import {
   EventSubChannelCheerEvent,
   EventSubChannelFollowEvent,
@@ -25,16 +19,23 @@ import {
   EventSubStreamOnlineEvent,
   EventSubSubscription
 } from '@twurple/eventsub-base'
+import {
+  ConnectionAdapter,
+  DirectConnectionAdapter,
+  DirectConnectionAdapterConfig,
+  EventSubHttpListener,
+  ReverseProxyAdapter,
+  ReverseProxyAdapterConfig
+} from '@twurple/eventsub-http'
 import { spawn } from 'child_process'
 import EventEmitter from 'events'
 import fs from 'fs'
 import _ from 'lodash'
 import { EOL } from 'os'
+import path from 'path'
 import stringArgv from 'string-argv'
 import { AuthServer, AuthServerConfig } from './authserver'
-import path from 'path'
-import { AppTokenAuthProvider } from '@twurple/auth'
-import { HelixEventSubSubscriptionData, HelixEventSubSubscriptionStatus } from '@twurple/api/lib/interfaces/endpoints/eventSub.external'
+import { StreamEvents } from './event_collector'
 
 export type DirectAdapterConfig = {
   adapterType: 'direct'
@@ -97,12 +98,32 @@ type ClipPick = Pick<HelixClip, 'creationDate' | 'duration' | 'embedUrl' | 'thum
 type UserPick = Pick<HelixUser, 'displayName' | 'description' | 'profilePictureUrl'>
 type GamePick = Pick<HelixGame, 'name' | 'boxArtUrl'>
 
-type PlainSub = {
-  user: UserPick
-  tier: number
-  gifter: UserPick
+type BaseSubKeys = 'broadcasterDisplayName' | 'broadcasterId' | 'broadcasterName' |
+'userId' | 'userName' | 'userDisplayName' |
+'tier'
 
-}
+type SubPick = Pick<HelixSubscription, 'gifterDisplayName' | 'gifterId' | 'gifterName' | 'isGift' | BaseSubKeys>
+
+type SubMessageEventPick = Pick<EventSubChannelSubscriptionMessageEvent,
+  'messageText' | 'streakMonths' | 'cumulativeMonths' | 'durationMonths' | BaseSubKeys>
+
+type SubEventPick = Pick<EventSubChannelSubscriptionEvent, BaseSubKeys | 'isGift'>
+
+type PlainSubApi = {
+  gifter?: UserPick
+} & SubPick
+
+type PlainSubEventMessage = {
+  parsedEmotes: ParsedMessagePart[]
+} & SubMessageEventPick
+
+type PlainSubEvent = SubEventPick
+
+export type PlainSub = {
+  broadcaster?: UserPick
+  user?: UserPick
+  isNew?: boolean
+} & Partial<PlainSubApi> & Partial<PlainSubEventMessage> & Partial<PlainSubEvent>
 
 export type PlainClip = {
   game: GamePick,
@@ -140,13 +161,13 @@ export class CustomEventSub {
   public readonly event: EventEmitter = new EventEmitter()
   private __userId: string
   public get userId () { return this.__userId }
-  private downId : string
+  private downId: string
   private upId: string
   private redeemId: string
   private clipsLimit: number
   public readonly start = new Date()
   public readonly clipsDir: string
-  private defaultSecret : string
+  private defaultSecret: string
   private appAuth: AppTokenAuthProvider
 
   constructor (public readonly config: Config) {
@@ -228,72 +249,137 @@ export class CustomEventSub {
 
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
-    this.handleSub('subMessage', () => this.listener.onChannelSubscriptionMessage({ id: this.userId }, e => {
+    this.handleSub(EventName.SUB_MESSAGE, () => this.listener.onChannelSubscriptionMessage({ id: this.userId }, e => {
       // do something when a subscription was received
       console.log(e.userDisplayName, 'announced their Tier', +e.tier / 1000, ' Subscription with message', e.messageText)
       this.event.emit(EventName.SUB_MESSAGE, e)
     }))
 
-    this.handleSub('sub', () => this.listener.onChannelSubscription({ id: this.userId }, e => {
+    this.handleSub(EventName.SUB, () => this.listener.onChannelSubscription({ id: this.userId }, e => {
       // do something when a subscription was received
       console.log(e.userDisplayName, 'subscribed with a tier', e.tier, 'subscription')
       this.event.emit(EventName.SUB, e)
     }))
 
-    this.handleSub('gift', () => this.listener.onChannelSubscriptionGift(this.userId, e => {
+    this.handleSub(EventName.GIFTSUB, () => this.listener.onChannelSubscriptionGift(this.userId, e => {
       // do something when a sub was gifted
       console.log(e.gifterDisplayName, 'gifted', e.amount || 1, 'tier', +e.tier / 1000, 'subscriptions')
       this.event.emit(EventName.GIFTSUB, e)
     }))
 
-    this.handleSub('cheer', () => this.listener.onChannelCheer({ id: this.userId }, e => {
+    this.handleSub(EventName.CHEER, () => this.listener.onChannelCheer({ id: this.userId }, e => {
       // do something when bits have been cheered
       console.log(e.userDisplayName, 'cheered', e.bits, 'with message:', e.message)
       this.event.emit(EventName.CHEER, e)
     }))
 
-    this.handleSub('redeem', () => this.listener.onChannelRedemptionAddForReward({ id: this.userId }, this.redeemId, e => {
+    this.handleSub(EventName.REDEEM, () => this.listener.onChannelRedemptionAddForReward({ id: this.userId }, this.redeemId, e => {
       console.log(e.userDisplayName, 'redeemed Credits with this message:', e.input)
       this.event.emit(EventName.REDEEM, e)
     }))
 
-    this.handleSub('pointsDown', () => this.listener.onChannelRedemptionAddForReward({ id: this.userId }, this.downId, e => {
+    this.handleSub(EventName.POINTSDOWN, () => this.listener.onChannelRedemptionAddForReward({ id: this.userId }, this.downId, e => {
       console.log(e.userDisplayName, 'redeemed Power Down with this message:', e.input)
       this.event.emit(EventName.POINTSDOWN, e)
     }))
 
-    this.handleSub('pointsUp', () => this.listener.onChannelRedemptionAddForReward({ id: this.userId }, this.upId, e => {
+    this.handleSub(EventName.POINTSUP, () => this.listener.onChannelRedemptionAddForReward({ id: this.userId }, this.upId, e => {
       console.log(e.userDisplayName, 'redeemed Power Up with this message:', e.input)
       this.event.emit(EventName.POINTSUP, e)
     }))
 
-    this.handleSub('follow', () => this.listener.onChannelFollow({ id: this.userId }, { id: this.userId }, e => {
+    this.handleSub(EventName.FOLLOW, () => this.listener.onChannelFollow({ id: this.userId }, { id: this.userId }, e => {
       console.log(e.userDisplayName, 'followed')
       this.event.emit(EventName.FOLLOW, e)
     }))
 
-    this.handleSub('raid', () => this.listener.onChannelRaidFrom({ id: this.userId }, e => {
+    this.handleSub(EventName.RAID, () => this.listener.onChannelRaidFrom({ id: this.userId }, e => {
       console.log(e.raidingBroadcasterDisplayName, 'raided with: ', e.viewers)
       this.event.emit(EventName.RAID, e)
     }))
 
-    this.handleSub('live', () => this.listener.onStreamOnline({ id: this.userId }, e => {
+    this.handleSub(EventName.LIVE, () => this.listener.onStreamOnline({ id: this.userId }, e => {
       console.log(e.broadcasterDisplayName, 'went live ')
       this.event.emit(EventName.LIVE, e)
     }))
   }
 
   async getSubscriptions () {
-    return await this.apiClient.subscriptions.getSubscriptionsPaginated({ id: this.userId }).getAll()
+    return await this.apiClient.subscriptions.getSubscriptionsPaginated({ id: this.userId })
+      .getAll()
+      .then((subs) => Promise.all(subs.map(sub => this.subToPlain(sub))))
+      .catch((err) => {
+        console.error(err)
+        return [] as PlainSub[]
+      })
   }
 
-  async subToPlain (sub : HelixSubscription | EventSubChannelSubscriptionMessageEvent) {
-    const s: PlainSub = {
-      user: await sub.getUser().then((user) => this.userToPlain(user)),
-      tier: sub?.tier,
-      gifter: sub.isGift && await sub.getGifter().then((gifter) => this.userToPlain(gifter))
+  async joinSubs (events: StreamEvents) {
+    const all = await this.getSubscriptions().then((subs) => new Map(subs.map((sub) => [sub.userId, sub])))
 
+    for (const newSub of events.newSubs) {
+      all.get(newSub).isNew = true
     }
+
+    for (const s of events.streaks) {
+      _.merge(all.get(s.userId), await this.subToPlain(s.event, {}))
+    }
+
+    return all
+  }
+
+  async subToPlain (
+    sub: HelixSubscription | EventSubChannelSubscriptionMessageEvent | EventSubChannelSubscriptionEvent,
+    populate: 'all' | Partial<Record<'user' | 'broadcaster' | 'gifter', boolean>> = { gifter: true, user: true }
+  ) {
+    const s: PlainSub = {
+      broadcasterDisplayName: sub.broadcasterDisplayName,
+      broadcasterName: sub.broadcasterName,
+      broadcasterId: sub.broadcasterId,
+      userDisplayName: sub.userDisplayName,
+      userName: sub.userDisplayName,
+      userId: sub.userId,
+      tier: sub.tier as PlainSub['tier']
+    }
+
+    if (populate && (populate === 'all' || populate?.user)) {
+      s.user = await sub.getUser().then((user) => this.userToPlain(user))
+    }
+
+    if (populate && (populate === 'all' || populate.broadcaster)) {
+      s.broadcaster = await sub.getBroadcaster().then((user) => this.userToPlain(user))
+    }
+
+    if (sub instanceof HelixSubscription) {
+      _.merge(s, <Partial<SubPick>>{
+        gifterDisplayName: sub.gifterDisplayName,
+        gifterName: sub.gifterName,
+        gifterId: sub.gifterId,
+        isGift: sub.isGift
+      })
+
+      if (populate && (populate === 'all' || populate.broadcaster)) {
+        s.gifter = sub.isGift && await sub.getGifter().then((gifter) => this.userToPlain(gifter))
+      }
+    }
+
+    if (sub instanceof EventSubChannelSubscriptionEvent) {
+      _.merge(s, <Partial<SubEventPick>>{
+        isGift: sub.isGift
+      })
+    }
+
+    if (sub instanceof EventSubChannelSubscriptionMessageEvent) {
+      s.parsedEmotes = sub.parseEmotes()
+      _.merge(s, <Partial<SubMessageEventPick>>{
+        cumulativeMonths: sub.cumulativeMonths,
+        durationMonths: sub.durationMonths,
+        streakMonths: sub.streakMonths,
+        messageText: sub.messageText
+      })
+    }
+
+    return s
   }
 
   userToPlain (user: HelixUser) {
@@ -352,7 +438,7 @@ export class CustomEventSub {
     return plain
   }
 
-  async getClips (useTime?: boolean | number | string | Date) {
+  async getClips (useTime?: boolean | number | string | Date): Promise<PlainClip[]> {
     console.log('Collecting clips')
     const clipFilter: HelixClipFilter = useTime
       ? {

@@ -1,18 +1,53 @@
+const VISIBLE_CLASS = 'visible'
+const CONTROLLER_SELECTOR = '.clip.controller'
+
 /**
  *
  * @param {HTMLDivElement} elem
  */
 function ClipControl (elem) {
-  this.elem = elem
-  /** @type {HTMLVideoElement} */
-  this.video = elem.querySelector('video')
+  this.controller = elem
+  this.clipId = elem.getAttribute('data-clip-id');
 
-  this.toggle = function () {
-    this.elem.classList.toggle('visible')
-    if (this.elem.classList.contains('visible')) {
-      this.video.play()
+  if (!this.clipId) {
+    return
+  }
+  
+  /** @type {boolean} */
+  this.visible = false
+  /** @type {string} */
+  this.linkedSelector = ':not(' + CONTROLLER_SELECTOR + ')[data-clip-id=' + this.clipId + ']'
+  /** @type {HTMLElement[]} */
+  this.linked = Array.prototype.slice.call(document.querySelectorAll(this.linkedSelector))
+
+  /** @type {HTMLElement} */
+  this.background = document.querySelector('.clip.background' + this.linkedSelector)
+  /** @type {HTMLElement} */
+  this.foreground = document.querySelector('.clip.background' + this.linkedSelector)
+
+  /** @type {HTMLVideoElement} */
+  this.video = this.background.querySelector('video')
+
+  this.show = () => {
+    this.visible = true
+    for (const l of this.linked) {
+      l.classList.add(VISIBLE_CLASS)   
+    }
+    this.video.play()
+  }
+
+  this.hide = () => {
+    this.visible = false
+    for (const l of this.linked) {
+      l.classList.remove(VISIBLE_CLASS)
+    }
+  }
+
+  this.toggle = () => {
+    if (this.visible) {
+      this.hide()
     } else {
-      this.video.pause()
+      this.show()
     }
   }
 
@@ -22,7 +57,7 @@ function ClipControl (elem) {
 window.addEventListener('DOMContentLoaded', () => {
   /** @type {ClipControl[]} */
   const clips = []
-  document.querySelectorAll('.background-clip').forEach((elem) => clips.push(new ClipControl(elem)))
+  document.querySelectorAll(CONTROLLER_SELECTOR).forEach((elem) => clips.push(new ClipControl(elem)))
 
   let i = 0
   const next = () => {
