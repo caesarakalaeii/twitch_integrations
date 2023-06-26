@@ -11,7 +11,7 @@ import repl from 'repl'
 import { CaesarEventSubConfig } from '.'
 import { Arduino, ArduinoConfig, Keyword } from './arduino'
 import { EventCollector } from './event_collector'
-import { CaesarEventSub, EventName } from './eventsub'
+import { CustomEventSub, EventName } from './eventsub'
 import { Queue } from './queue'
 import { Relais, RelaisConfig } from './relais'
 import { Taser, TaserConfig } from './taser'
@@ -91,7 +91,7 @@ const createAuthMiddleware:{(creds: Credentials[]): Handler} = function (creds) 
 type Scope = {
   config: Config
   ecol: EventCollector
-  esub: CaesarEventSub
+  esub: CustomEventSub
   arduino: Arduino
   relais: Relais
 }
@@ -249,7 +249,7 @@ export async function startServer ({ config, arduino, relais, ecol, esub }: Scop
 
 export async function main () {
   const config = await loadFile<Config>('config.js')
-  const esub = new CaesarEventSub(config.eventSub)
+  const esub = new CustomEventSub(config.eventSub)
   let relais: Relais
   let arduino: Arduino
   let taser: Taser
@@ -319,10 +319,6 @@ export async function main () {
 
   esub.on(EventName.LIVE, e => {
     if (config?.credits?.clips) queue.add(() => esub.getSubscriptions().then((subs) => eventCollector.addAllSubs(subs)))
-  })
-
-  esub.on(EventName.SUBANNOUNCE, e => {
-    if (config?.credits?.announcedSubs) queue.add(() => eventCollector.addSubStreak(e))
   })
 
   if (config.api) {

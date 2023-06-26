@@ -1,5 +1,5 @@
 import { HelixSubscription } from '@twurple/api'
-import { EventSubChannelCheerEvent, EventSubChannelSubscriptionGiftEvent, EventSubChannelRedemptionAddEvent, EventSubChannelSubscriptionEvent, EventSubChannelFollowEvent, EventSubChannelRaidEvent, EventSubChannelSubscriptionMessageEvent } from '@twurple/eventsub'
+import { EventSubChannelCheerEvent, EventSubChannelSubscriptionGiftEvent, EventSubChannelRedemptionAddEvent, EventSubChannelSubscriptionEvent, EventSubChannelFollowEvent, EventSubChannelRaidEvent, EventSubChannelSubscriptionMessageEvent } from '@twurple/eventsub-base'
 import type { PlainClip } from './eventsub'
 
 export type UserEvent = {

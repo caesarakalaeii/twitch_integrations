@@ -1,1 +1,1 @@
-export { CaesarEventSub, Config as CaesarEventSubConfig } from './eventsub'
+export { CustomEventSub as CaesarEventSub, Config as CaesarEventSubConfig } from './eventsub'
