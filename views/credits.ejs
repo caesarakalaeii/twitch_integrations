@@ -162,7 +162,7 @@
   <div class="list_title">Subscriptions</div>
   <div class="list_container">
     <% for (const sub of subs.filter((sub => sub.broadcasterId !== sub.userId))) { %>
-      <!-- <%- JSON.stringify(s, null, '  ') %> -->
+      <!-- <%- JSON.stringify(sub, null, '  ') %> -->
       <div class="list_item">
         <span class="username"><%= sub.userDisplayName %></span>
         <% if (sub.isNew) { %><span class="new_badge">NEW</span><% } %>
