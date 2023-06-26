@@ -2,6 +2,7 @@ import { AccessToken, AccessTokenMaybeWithUserId, AccessTokenWithUserId, AuthPro
 import { UserIdResolvable } from '@twurple/common'
 import express, { Application } from 'express'
 import _ from 'lodash'
+import { waitFor } from './wait'
 
 export type AuthServerBaseConfig = {
   apiUrl: string
@@ -142,7 +143,7 @@ export class AuthServer implements AuthProvider {
   }
 
   private async auth (scopes?: string[]) {
-    return await new Promise<string>((resolve, reject) => {
+    return await waitFor('complete user auth', () => new Promise<string>((resolve, reject) => {
       console.log('go to', `http://localhost:${this.port}/auth?` + new URLSearchParams({
         scope: Array.from(new Set([
           ...this.config.scopes,
@@ -150,6 +151,6 @@ export class AuthServer implements AuthProvider {
         ])).join(' ')
       }))
       this.authorizer = { resolve, reject }
-    })
+    }))
   }
 }
