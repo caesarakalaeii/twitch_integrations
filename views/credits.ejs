@@ -164,6 +164,9 @@
     <% for (const sub of subs.filter((sub => sub.broadcasterId !== sub.userId))) { %>
       <!-- <%- JSON.stringify(sub, null, '  ') %> -->
       <div class="list_item">
+        <% if (sub.user) { %>
+          <img class="avatar" src="<%= sub.user.profilePictureUrl %>" />
+        <% } %>
         <span class="username"><%= sub.userDisplayName %></span>
         <% if (sub.isNew) { %><span class="new_badge">NEW</span><% } %>
         <% if (sub.isGift) { %><span class="gifter username"><%= sub.gifterDisplayName %></span><% } %>
