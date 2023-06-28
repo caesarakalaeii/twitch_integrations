@@ -188,7 +188,7 @@ export async function startServer ({ config, arduino, relais, ecol, esub }: Scop
         const mock = typeof req.query.mock !== 'undefined'
         const unmuted = typeof req.query.unmuted !== 'undefined'
         const autoplay = typeof req.query.autoplay !== 'undefined'
-        const clips = await esub.getClips()
+        const clips = await esub.getClips(new Date('01-05-2023'))
         const subs = mock ? mockSubs() : await esub.joinSubs(ecol)
 
         res.render('credits', _.merge({

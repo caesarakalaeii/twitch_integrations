@@ -23,15 +23,18 @@ p, span {
 .header,
 .list_title,
 .closure {
+  text-align: center;
   font-family: 'Comfortaa', cursive;
+  margin: 50vh 0;
+  font-size: 5em;
+  font-weight: bold;
+  color: blue;
+  padding-top: 100px;
+  justify-content: center;
 }
 
 .header {
   margin-top: 100vh;
-}
-
-.closure {
-  margin: 50vh 0;
 }
 
 @keyframes rainbow {
@@ -62,13 +65,6 @@ p, span {
   font-size: 5em;
   font-weight: bold;
   color: blue;
-}
-
-.closure {
-  font-size: 5em;
-  font-weight: bold;
-  color: blue;
-  padding-top: 100px;
 }
 
 .amount {
@@ -157,11 +153,16 @@ p, span {
 }
 
 .streak {
+  display: flex;
+  flex-basis: 100%;
   font-size: 1.1em;
+  padding-right: 3px;
+  padding-left: 3px;
   font-weight: bold;
   font-family: 'Comfortaa';
 }
-.streak_length.less_six {
+.streak.less_six {
+  flex-basis: 100%;
   text-shadow:
      1px -1px 1px gray,
     -1px  1px 1px gray,
@@ -170,7 +171,8 @@ p, span {
 
 }
 
-.streak_length.less_twelve {
+.streak.less_twelve {
+  flex-basis: 100%;
     text-shadow:
        1px -1px 1px gold,
       -1px  1px 1px gold,
@@ -180,7 +182,8 @@ p, span {
  
 }
 
-.streak_length.more_twelve {
+.streak.more_twelve {
+  flex-basis: 100%;
   text-shadow:
      1px -1px 1px rgb(255, 115, 0),
     -1px  1px 1px rgb(255, 115, 0),
@@ -190,44 +193,31 @@ p, span {
 
 }
 
-.streak_length.less_six::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
-  transform: scale(2, 1);
-  background-image: url(less_six.gif);
-  background-size: cover;
-  background-position: 50% 50%;
-  z-index: -1;
-}
 
-.streak_length.less_twelve::after {
+.vert_container.less_twelve::after {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   bottom: 0;
   right: 0;
-  transform: scale(2, 1);
+  transform: scale(1);
   background-image: url(less_twelve.gif);
-  background-size: cover;
+  background-size: contain;
   background-position: 50% 50%;
   z-index: -1;
 }
 
-.streak_length.more_twelve::after {
+.vert_container.more_twelve::after {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   bottom: 0;
   right: 0;
-  transform: scale(2, 1);
+  transform: scale(1);
   background-image: url(more_twelve.gif);
-  background-size: cover;
+  background-size: contain;
   background-position: 50% 50%;
   z-index: -1;
 }
@@ -272,7 +262,7 @@ p, span {
 
 .vert_container {
   display: flex;
-  flex-flow: column nowrap;
+  flex-flow: column wrap;
   gap: 8px;
   z-index: -1;
 }
@@ -289,6 +279,14 @@ p, span {
   color: white;
   gap: 12px;
   z-index: -1;
+}
+.gifter{
+  font-size: 1.1em;
+  font-weight: bold;
+  font-family: 'Comfortaa';
+  min-width: 256px;
+  margin: 0 4px;
+  position: center;
 }
 
 .list_item {

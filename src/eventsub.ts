@@ -461,6 +461,7 @@ export class CustomEventSub {
         res.map((item) => this.clipToPlain(item))))
         .then((plains) => clips.push(...plains))
     }
+    // clips.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) //not sure if needed more testing
 
     const clipPaths = clips.map((clip) => path.join(this.clipsDir, clip.id + '.mp4'))
     if (clips.length > this.clipsLimit) {

@@ -31,7 +31,7 @@ export function mockEvents () {
     } else if (i < 5 * max / functions) {
       const cheerEvent :CheerEvent = {
         user: name,
-        amount: Math.floor(Math.random() * 100),
+        amount: Math.floor(1 + Math.random() * 150000),
         messages: [message]
       }
       for (let i = 1; i < Math.floor(Math.random() * 5); i++) {
@@ -47,15 +47,17 @@ export function mockEvents () {
     } else if (i < 7 * max / functions) {
       const raidEvent: RaidEvent = {
         user: name,
-        amount: Math.floor(Math.random() * 100)
+        amount: 1 + Math.floor(Math.random() * 5000)
       }
       events.raids.push(raidEvent)
     } else if (i < 8 * max / functions) {
+      const streak = 1 + Math.floor(Math.random() * 30)
+      const fullAmount = streak + Math.floor(Math.random() * 30)
       const streakEvent: SubStreak = {
         user: name,
         userId: crypto.randomUUID(),
-        full_amount: Math.floor(Math.random() * 30),
-        streak: Math.floor(Math.random() * 30),
+        fullAmount,
+        streak,
         tier: 1 + Math.floor(Math.random() * 3),
         message,
         event: null

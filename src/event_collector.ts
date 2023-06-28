@@ -9,7 +9,7 @@ export type SubStreak = {
   userId: string,
   message: string,
   streak: number,
-  full_amount: number,
+  fullAmount: number,
   tier: number,
   event: EventSubChannelSubscriptionMessageEvent
 }
@@ -109,7 +109,7 @@ export class EventCollector implements StreamEvents {
       message: e.messageText,
       tier: Number(e.tier) / 1000,
       streak: e.streakMonths,
-      full_amount: e.cumulativeMonths,
+      fullAmount: e.cumulativeMonths,
       event: e
     })
   }
