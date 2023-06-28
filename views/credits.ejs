@@ -11,6 +11,15 @@
     return 'more_twelve'
   }
 }; %>
+<% function getTier(tier){
+  if(tier == 3){
+    return '3'
+  } else if (tier == 2){
+    return '2'
+  } else {
+    return ''
+  }
+} %>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Credits</title>
@@ -59,7 +68,8 @@
 <% } %>
 <!-- END CLIPS -->
 
-<div id="scroll" class="scroll-container"><div class="scroll-content">
+<div id="scroll" class="scroll-container">
+  <div class="scroll-content">
   <div class="header grad-text">Thanks for watching!</div>
 <!-- BEGIN GIFTED -->
   <% if (gifted && gifted?.length) { %>
@@ -80,43 +90,43 @@
 <!-- END GIFTED -->
 
 <!-- BEGIN NEWSUBS -->
-  <% if ((newSubs && newSubs?.length) ||(streaks && streaks?.length) ){%>
+  <% if ((newSubs && newSubs?.length) ||(streaks && streaks?.length)) { %>
   <div class="list_title">New Subscriptions:</div>
+  
   <div class="list_container" id="new_subs">
-    
     <% streaks.forEach(function(event){ %>
       <div class="list_item message <%= oddEven() %>">
-        <span class="username">
-          <%= event.user %>
-        </span>
+        <div class="saiyan<%=getTier(event.tier)%>" >
+            <%= event.user %>
+        </div>
+        
         <div class="vert_container">
-          <span class="tier">
-            Tier: <%= event.tier %>
-          </span>
           <span class="streak">
             <div class="streak_length<%streakCalc(event.streak)%>">
               <%= event.streak%>
             </div>
-            <div class="full_amount">
-              <%event.full_amount%>
-            </div>
+            <% if(event.streak != event.full_amount) {%>
+              <div class="streak">
+                <%= event.full_amount%>
+              </div>
+            <% } %>
           </span>
         </div>
         <span class="message <%= oddEven() %>">
-          <%= event.message %>
+            <%= event.message %>
         </span>
-        
-      </div>
-    <% }) %>
-    <% newSubs.forEach(function(event) { %>
-      <div class="list_item message <%= oddEven() %>">
-        <span class="username">
-          <%= event %>
-        </span>
-      </div>
-    <% }) %>
-  </div>
+            
+        </div>
+        <% }) %>
+        <% newSubs.forEach(function(event) { %>
+          <div class="list_item message <%= oddEven() %>">
+            <span class="username">
+              <%= event %>
+            </span>
+          </div>
+  <% }) %>
   <% } %>
+  </div>
 <!-- END NEWSUBS -->
 
 <!-- BEGIN CHEERS -->

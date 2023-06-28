@@ -56,7 +56,7 @@ export function mockEvents () {
         userId: crypto.randomUUID(),
         full_amount: Math.floor(Math.random() * 30),
         streak: Math.floor(Math.random() * 30),
-        tier: 1 + Math.floor(Math.random() * 2),
+        tier: 1 + Math.floor(Math.random() * 3),
         message,
         event: null
       }

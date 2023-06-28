@@ -12,7 +12,7 @@ function ClipControl (elem) {
   if (!this.clipId) {
     return
   }
-  
+
   /** @type {boolean} */
   this.visible = false
   /** @type {string} */
