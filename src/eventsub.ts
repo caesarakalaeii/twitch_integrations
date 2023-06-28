@@ -180,7 +180,7 @@ export class CustomEventSub {
     this.downId = this.config.downId
     this.redeemId = this.config.redeemId
     this.clipsDir = this.config.clipsDir || './clips'
-    this.clipsLimit = this.config.clipsLimit || 10
+    this.clipsLimit = Math.max(this.config.clipsLimit, 0) || 10
     this.defaultSecret = this.config.defaultSecret
 
     switch (this.config.adapterType) {
@@ -444,7 +444,6 @@ export class CustomEventSub {
   }
 
   async getClips (useTime?: boolean | number | string | Date): Promise<PlainClip[]> {
-    console.log('Collecting clips')
     const clipFilter: HelixClipFilter = useTime
       ? {
           startDate: typeof useTime === 'boolean'
@@ -455,17 +454,16 @@ export class CustomEventSub {
       : undefined
 
     const paginator = this.apiClient.clips.getClipsForBroadcasterPaginated({ id: this.userId }, clipFilter)
-    let clips = []
-    while (clips.length < this.clipsLimit) {
-      await paginator.getNext().then((res) => Promise.all(
-        res.map((item) => this.clipToPlain(item))))
-        .then((plains) => clips.push(...plains))
+    const clips = []
+    let done = false
+    while (!done && clips.length < this.clipsLimit) {
+      // done is true when the new length of clips is unchanged
+      done = clips.length === await paginator.getNext()
+        .then((res) => Promise.all(res.map((item) => this.clipToPlain(item))))
+        .then((plains) => clips.push(...plains.slice(0, this.clipsLimit - clips.length)))
     }
 
     const clipPaths = clips.map((clip) => path.join(this.clipsDir, clip.id + '.mp4'))
-    if (clips.length > this.clipsLimit) {
-      clips = clips.slice(0, -(clips.length - this.clipsLimit))
-    }
     for (let i = 0; i < clips.length; i++) {
       const clip = clips[i]
       const clipPath = clipPaths[i]
