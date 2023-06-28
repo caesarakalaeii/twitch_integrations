@@ -457,9 +457,12 @@ export class CustomEventSub {
     const paginator = this.apiClient.clips.getClipsForBroadcasterPaginated({ id: this.userId }, clipFilter)
     let clips = []
     while (clips.length < this.clipsLimit) {
-      await paginator.getNext().then((res) => Promise.all(
+      const plains = await paginator.getNext().then((res) => Promise.all(
         res.map((item) => this.clipToPlain(item))))
-        .then((plains) => clips.push(...plains))
+      if (plains.length === 0) {
+        break // checks if eternal loop awaits
+      }
+      clips.push(...plains)
     }
     // clips.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) //not sure if needed more testing
 
