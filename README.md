@@ -1,8 +1,9 @@
 # twitch_integrations  
 ### This application allows for highly customizable Twitch integrations.  
+Please be sure to Credit Kouna and CaesarLP, when using.
 ## Current features:  
 ✔️ Get events from Twitch API to send commands to an Arduino  
-✔️ Get redeems, and subs to compile a credit screen  [CURRENTLY ONLY IN DEV BRANCH]
+✔️ Get redeems, and subs to compile a credit screen
 
 # TO-DO  
 ❌ Collecting followers is bugged and nonfunctional  
