@@ -7,7 +7,7 @@ const CONTROLLER_SELECTOR = '.clip.controller'
  */
 function ClipControl (elem) {
   this.controller = elem
-  this.clipId = elem.getAttribute('data-clip-id');
+  this.clipId = elem.getAttribute('data-clip-id')
 
   if (!this.clipId) {
     return
@@ -31,7 +31,7 @@ function ClipControl (elem) {
   this.show = () => {
     this.visible = true
     for (const l of this.linked) {
-      l.classList.add(VISIBLE_CLASS)   
+      l.classList.add(VISIBLE_CLASS)
     }
     this.video.play()
   }
@@ -62,6 +62,11 @@ window.addEventListener('DOMContentLoaded', () => {
   let i = 0
   const next = () => {
     const clip = clips[i++ % clips.length]
+
+    if (!clip) {
+      return
+    }
+
     clip.video.addEventListener('ended', () => {
       clip.toggle()
       next()

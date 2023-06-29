@@ -92,7 +92,7 @@ export enum EventName {
   RAID = 'raid'
 }
 
-type ClipPick = Pick<HelixClip, 'creationDate' | 'duration' | 'embedUrl' | 'thumbnailUrl' |
+type ClipPick = Pick<HelixClip, 'duration' | 'embedUrl' | 'thumbnailUrl' |
   'url' | 'creatorId' | 'creatorDisplayName' | 'gameId' | 'views' | 'title' | 'broadcasterDisplayName' |
   'broadcasterId' | 'id' | 'vodOffset'>
 type UserPick = Pick<HelixUser, 'displayName' | 'description' | 'profilePictureUrl'>
@@ -129,6 +129,8 @@ export type PlainClip = {
   game: GamePick,
   creator: UserPick,
   broadcaster: UserPick,
+  /** ISO TimeStamp for when the clip was created */
+  created: string,
 } & ClipPick
 
 export async function youtubeDLP (url: string, options?: { output?: string, format?: string }) {
@@ -418,8 +420,8 @@ export class CustomEventSub {
       clip.getCreator().then((res) => this.userToPlain(res))
     ])
 
-    const plain:PlainClip = {
-      creationDate: clip.creationDate,
+    const plain: PlainClip = {
+      created: clip.creationDate.toISOString(),
       duration: clip.duration,
       embedUrl: clip.embedUrl,
       thumbnailUrl: clip.thumbnailUrl,
@@ -444,17 +446,17 @@ export class CustomEventSub {
   }
 
   async getClips (useTime?: boolean | number | string | Date): Promise<PlainClip[]> {
-    const clipFilter: HelixClipFilter = useTime
-      ? {
-          startDate: typeof useTime === 'boolean'
-            ? this.start.toISOString()
-            : new Date(useTime).toISOString(),
-          endDate: new Date().toISOString()
-        }
-      : undefined
+    let clipFilter: HelixClipFilter
+    if (useTime) {
+      const startDate = typeof useTime === 'boolean'
+        ? this.start.toISOString()
+        : new Date(useTime || new Date()).toISOString()
+
+      clipFilter = { startDate, endDate: new Date().toISOString() }
+    }
 
     const paginator = this.apiClient.clips.getClipsForBroadcasterPaginated({ id: this.userId }, clipFilter)
-    const clips = []
+    let clips: PlainClip[] = []
     let done = false
     while (!done && clips.length < this.clipsLimit) {
       // done is true when the new length of clips is unchanged
@@ -462,6 +464,8 @@ export class CustomEventSub {
         .then((res) => Promise.all(res.map((item) => this.clipToPlain(item))))
         .then((plains) => clips.push(...plains.slice(0, this.clipsLimit - clips.length)))
     }
+
+    clips = clips.sort((a, b) => a.created.localeCompare(b.created))
 
     const clipPaths = clips.map((clip) => path.join(this.clipsDir, clip.id + '.mp4'))
     for (let i = 0; i < clips.length; i++) {
