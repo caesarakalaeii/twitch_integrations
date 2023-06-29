@@ -112,11 +112,11 @@ p, span {
 }
 
 .saiyan.tier3::after {
-  background-image: url(vid3.gif);
+  background-image: url(tier3.gif);
 }
 
 .saiyan.tier2::after {
-  background-image: url(vid2.gif);
+  background-image: url(tier2.gif);
 }
 
 .username {
