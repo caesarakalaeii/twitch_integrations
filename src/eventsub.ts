@@ -264,7 +264,7 @@ export class CustomEventSub {
 
     this.handleSub(EventName.SUB, () => this.listener.onChannelSubscription({ id: this.userId }, e => {
       // do something when a subscription was received
-      console.log(e.userDisplayName, 'subscribed with a tier', e.tier, 'subscription')
+      console.log(e.userDisplayName, 'subscribed with a tier', +e.tier / 1000, 'subscription')
       this.event.emit(EventName.SUB, e)
     }))
 
