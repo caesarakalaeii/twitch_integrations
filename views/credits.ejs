@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<%
+// =============================================================================
+// BEGIN TEMPLATE FUNCTIONS
+// =============================================================================
+let msg = 0
+const oddEven = () => msg++ % 2 ? 'odd': 'even'
+
+/**
+ * @param {[class: string, maxValue: number][]} set
+ * @param {number} x
+ * @param {(x: number, value: number, index: number) => boolean} [predicate]
+ * @returns {string}
+ */
+function numap (set = [], x = 0, predicate = (x, v, i) => x < v) {
+  const result = set.find(([, v], i) => predicate(x, v, i))
+  return (result && result[0]) || set.slice(-1)[0][0]
+}
+
+const streakMap = Object.entries({
+  less_six: 6,
+  less_twelve: 12,
+  more_twelve: Infinity
+})
+
+const cheerMap = Object.entries({
+  cheer1: 100,
+  cheer100: 1e3,
+  cheer1k: 5e3,
+  cheer5k: 1e4,
+  cheer10k: 1e5,
+  cheer100k: Infinity
+})
+
+const tiers = Object.entries({
+  tier1: 1,
+  tier2: 2,
+  tier3: 3
+})
+
+function getTier(tier) {
+  return numap(tiers, tier, (x, v) => x === v)
+}
+
+function boxArt(game) {
+  return game.boxArtUrl.split(/-\{width\}x\{height\}/i).join('')
+}
+
+// =============================================================================
+// END TEMPLATE FUNCTIONS
+// =============================================================================
+%><html class="<%= !(clips && clips.length) ? 'clipless' : '' %>">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Credits</title>
+  <link rel="stylesheet" href="/content/style.css" />
+  <% if (!noScroll) { %><script src="/content/scroll.js"></script><% } %>
+  <script src="/content/clip.js"></script>
+  <script src="/content/data.js"></script>
+  <script src="/content/round.js"></script>
+</head>
+<body>
+
+<!----------------------------------------------- BEGIN CLIPS ----------------->
+<% if (clips && clips?.length) { %>
+<% clips.forEach((clip, i) => { %>
+  <div id="clip<%= i %>" class="clip controller" data-clip-id="<%= clip.id %>"></div>
+
+  <div class="clip fixed background" data-clip-id="<%= clip.id %>">
+    <video poster="<%= clip.thumbnailUrl %>" <%= !unmuted ? 'muted' : '' %> <%= autoplay ? 'autoplay' : '' %>>
+      <source src="/clip/<%= clip.id %>" type="video/mp4"/>
+    </video>
+  </div>
+
+  <div class="clip info left" data-clip-id="<%= clip.id %>">
+    <!-- <%- JSON.stringify(clip, null, '  ') %> -->
+    <div class="title">
+      <q><%= clip.title %></q>
+    </div>
+    <div class="created-by line">
+      <img class="avatar" src="<%= clip.creator.profilePictureUrl %>" />
+      <div class="stack">
+        <span class="username"><%= clip.creatorDisplayName %></span>
+        <span data-date="<%= new Date(clip.created).toISOString() %>"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="clip info right" data-clip-id="<%= clip.id %>">
+    <div class="game">
+      <div class="title"><%= clip.game.name %></div>
+      <img class="box-art" src="<%= boxArt(clip.game) %>">
+    </div>
+  </div>
+<% }) %>
+<% } %>
+<!-- END CLIPS -->
+
+<!------------------------------------------------------------------------------
+------------------------------------------------- BEGIN CONTENT ----------------
+------------------------------------------------------------------------------->
+<div id="scroll" class="scroll-container" <% if (noScroll) { %>style="overflow: auto"<% } %>>
+  <div class="scroll-content">
+    <div class="header grad-text">Thanks for watching!</div>
+
+<!----------------------------------------------- BEGIN GIFTED ---------------->
+<% if (gifted && gifted?.length) { %>
+<div class="content-box" id="gifted">
+  <div class="list_title">Gifted Subs:</div>
+  <div class="list_container ranking">
+    <% gifted.sort((a, b) => b.amount - a.amount).forEach(function(event) { %>
+      <div class="list_item message <%= oddEven() %>">
+        <span class="username"><%= event.user %></span>
+        <span class="amount"><%= event.amount.toLocaleString() %></span>
+      </div>
+    <% }) %>
+  </div>
+</div>
+<% } %>
+<!----------------------------------------------- END GIFTED ------------------>
+
+<!----------------------------------------------- BEGIN NEW SUBS -------------->
+<% if ((newSubs && newSubs?.length) ||(streaks && streaks?.length)) { %>
+<div class="content-box" id="new_subs">
+  <div class="list_title">New Subscriptions:</div>  
+  <div class="list_container">
+    <% streaks.forEach(function(event) { const streakClass = numap(streakMap, event.streak); %>
+      <div class="list_item streak <%= oddEven() %>">
+        <div class="username saiyan <%=getTier(event.tier)%>">
+          <span><%= event.user %></span>
+        </div>
+        
+        <div class="streak-stats">
+          <span class="stat current"><%= event.streak %></span>
+          <% if(event.streak < event.full_amount) {%>
+            <span class="stat top"><%= event.full_amount%></span>
+          <% } %>
+        </div>
+      
+        <span class="message"><%= event.message %></span>
+      </div>
+    <% }) %>
+    
+    <% newSubs.forEach(function(event) { %>
+      <div class="list_item message <%= oddEven() %>" style="justify-content: center;">
+        <span class="username"><%= event %></span>
+      </div>
+    <% }) %>
+  </div>
+</div>
+<% } %>
+<!----------------------------------------------- END NEW SUBS ---------------->
+
+<!----------------------------------------------- BEGIN CHEERS ---------------->
+<% if (cheers && cheers?.length){%>
+<div class="content-box" id="cheers">
+  <div class="list_title">Cheers:</div>
+  <div class="list_container">
+    <% cheers.sort((a, b) => b.amount - a.amount).forEach(function(event) { %>
+    <div class="list_item">
+      <img class="cheer-icon" src="/content/<%= numap(cheerMap, event.amount) %>.gif">
+      <span class="amount"><%= event.amount.toLocaleString() %></span>
+      <span class="username"><%= event.user %></span>
+      <div class="vert_container">
+        <% (event?.messages || []).forEach(function(m) { %>
+          <div class="message <%= oddEven() %>"><%= m %></div>
+        <% }) %>
+      </div>
+    </div>
+    <% }) %>
+  </div>
+</div>
+<% } %>
+<!----------------------------------------------- END CHEERS ------------------>
+  
+<!----------------------------------------------- BEGIN RAIDS ----------------->
+<% if (raids && raids?.length) { %>
+  <div class="content-box" id="raids">
+    <div class="list_title">Thanks to the Raiders:</div>
+    <div class="list_container">
+      <% raids.sort((a, b) => b.amount - a.amount).forEach(function(event) { %>
+        <div class="list_item message <%= oddEven() %>">
+          <span class="username"><%= event.user %></span>
+          <span class="amount"><%= event.amount.toLocaleString() %></span>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+<% } %>
+<!----------------------------------------------- END RAIDS ------------------->
+
+<!----------------------------------------------- BEGIN FULL SUBS ------------->
+<% if (subs && subs?.length) { %>
+  <div class="content-box" id="full_subs">
+    <div class="list_title">Subscriptions</div>
+    <div class="list_container">
+      <% for (const sub of subs.filter((sub => sub.broadcasterId !== sub.userId))) { %>
+        <!-- <%- JSON.stringify(sub, null, '  ') %> -->
+        <div class="list_item <%= sub.user ? 'rounded' : '' %>" data-rounded-corners="0,1">
+          <% if (sub.user) { %>
+            <img class="avatar" src="<%= sub.user.profilePictureUrl %>" />
+          <% } %>
+          <span class="username"><%= sub.userDisplayName %></span>
+          <% if (sub.isNew) { %><span class="new_badge">NEW</span><% } %>
+          <% if (sub.isGift) { %>
+            <div class="line">
+              <img src="/content/gift.png" class="inline-icon">
+              <span class="gifter"><%= sub.gifterDisplayName %></span>
+              <span class="gift_by_badge">by</span>
+            </div>
+          <% } %>
+          <% if (sub.durationMonths) { %><span class="duration months"><%= sub.durationMonths %></span><% } %> 
+        </div>
+      <% } %>
+    </div>
+  </div>
+<% } %>
+<!----------------------------------------------- END FULL SUBS --------------->
+
+<!----------------------------------------------- BEGIN REDEEMS --------------->
+<% if (redeems && redeems?.length) {%>
+  <div class="content-box" id="redeems">
+    <div class="list_title">Redeems:</div>
+    <div class="list_container">
+      <% redeems.forEach(function(event) { %>
+        <div class="list_item">
+          <span class="username">
+            <%= event.user %>
+          </span>
+          <span class="message <%= oddEven() %>">
+            <%= event.message %>
+          </span>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+<% } %>
+<!----------------------------------------------- END REDEEMS ----------------->
+  
+<!----------------------------------------------- BEGIN FOLLOWS --------------->
+<% if (follows && follows?.length) { %>
+  <div class="content-box" id="follows">
+    <div class="list_title">Follows:</div>
+    <p class="list_no_break">
+      <% follows.forEach(function(user, index) { %>
+      <span class="comma_separated"><%= user %></span>
+      <% }) %>
+    </p>
+  </div>
+<% } %>
+<!----------------------------------------------- END FOLLOWS ----------------->
+  
+      <div class="closure grad-text">Sweet dreams of sour pickles</div>
+      <div class="credit_where_credit_is_due">Developed by Kouna and CaesarLP</div>
+
+    </div> <!-- scroll content -->
+  </div> <!-- scroll container -->
+</body>
+
+</html>
