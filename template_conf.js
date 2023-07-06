@@ -11,7 +11,7 @@ function createSecret () {
   return secret
 }
 
-const { clientId, clientSecret } = JSON.parse(fs.readFileSync(path.join(os.homedir(), 'YOUR_TWITCH_SECRETS'))) // path where your twitch secrets lay
+const { clientId, clientSecret } = JSON.parse(fs.readFileSync(path.join(os.homedir(), 'YOUR_TWITCH_SECRETS'))) // path where your twitch secrets lay, see same link as client id
 
 /** @type {import('./dist/main').Config} */
 const config = {
@@ -33,6 +33,7 @@ const config = {
         'moderator:read:followers'
       ]
     },
+    defaultSecret: 'JUST SOME RANDOM SHIT', // Like Actually just roll your head on the keyboard
     user: 'YOUR_CHANNEL_NAME', // Your channel name
     adapterType: 'proxy', // only change this if you are not using a reverse proxy HIGHLY DISCOURAGED
     adapter: {
@@ -45,10 +46,10 @@ const config = {
       : createSecret()
   },
   api: {
-    port: 38080, // the port on wich the api will listen on commands, also used for displaying the credits
+    port: 38080, // the port on wich the api will listen on commands via REST, also used for displaying the credits
     hostname: 'localhost'
   },
-  arduino: {
+  arduino: { // comment the whole thing out if you dont use an Arduino
     serial: {
       path: 'YOUR_COM_PORT', // the port your Arduino is connected to, see here: https://support.arduino.cc/hc/en-us/articles/4406856349970-Select-board-and-port-in-Arduino-IDE
       baudRate: 9600,
