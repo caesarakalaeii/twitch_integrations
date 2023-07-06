@@ -12,7 +12,7 @@ Please be sure to Credit Kouna and CaesarLP, when using.
 
 # HOW TO USE:  
 
-A working install of Node-JS and yt-dkp is needed.  
+A working install of Node-JS and yt-dlp is needed.  
 You'll need a decent understanding of web servers or someone who does.  
 Setting up a reverse proxy using nginx in a docker container is recommended.  
 Change the CAPITALIZED parts of the template_conf.js and rename it to config.js.  
