@@ -3,11 +3,9 @@
 Please be sure to Credit Kouna and CaesarLP, when using.
 ## Current features:  
 ✔️ Get events from Twitch API to send commands to an Arduino  
-✔️ Get redeems, and subs to compile a credit screen
+✔️ Get redeems, follows, sub-streaks and subs to compile a credit screen
 
 # TO-DO  
-❌ Collecting followers is bugged and nonfunctional  
-❌ Sub-Streaks not yet added to .html  
 ❌ Add Persistence to prevent data loss in cases of crashing  
 
 # HOW TO USE:  
