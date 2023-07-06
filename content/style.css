@@ -12,6 +12,9 @@
   --c-even: rgba(255,255,255,.15);
   --c-odd-text: var(--c-text);
   --c-even-text: var(--c-twitch);
+  --c-streak-more-twelve: rgb(255, 115, 0);
+  --c-streak-less-twelve: gold;
+  --c-streak-less-six: gray;
   --f-backdrop: blur(8px);
   --outline:
     1px -1px 1px var(--c-outline),
@@ -160,29 +163,29 @@ p, span {
 .streak.less_six {
   flex-basis: 100%;
   text-shadow:
-     1px -1px 1px gray,
-    -1px  1px 1px gray,
-    -1px -1px 1px gray,
-     1px  1px 1px gray;
+     1px -1px 1px var(--c-streak-less-six),
+    -1px  1px 1px var(--c-streak-less-six),
+    -1px -1px 1px var(--c-streak-less-six),
+     1px  1px 1px var(--c-streak-less-six);
 
 }
 
 .streak.less_twelve {
   flex-basis: 100%;
     text-shadow:
-       1px -1px 1px gold,
-      -1px  1px 1px gold,
-      -1px -1px 1px gold,
-       1px  1px 1px gold;
+       1px -1px 1px var(--c-streak-less-twelve),
+      -1px  1px 1px var(--c-streak-less-twelve),
+      -1px -1px 1px var(--c-streak-less-twelve),
+       1px  1px 1px var(--c-streak-less-twelve);
 }
 
 .streak.more_twelve {
   flex-basis: 100%;
   text-shadow:
-     1px -1px 1px rgb(255, 115, 0),
-    -1px  1px 1px rgb(255, 115, 0),
-    -1px -1px 1px rgb(255, 115, 0),
-     1px  1px 1px rgb(255, 115, 0);
+     1px -1px 1px var(--c-streak-more-twelve),
+    -1px  1px 1px var(--c-streak-more-twelve),
+    -1px -1px 1px var(--c-streak-more-twelve),
+     1px  1px 1px var(--c-streak-more-twelve);
 }
 
 
