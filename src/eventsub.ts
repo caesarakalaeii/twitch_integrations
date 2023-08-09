@@ -456,16 +456,16 @@ export class CustomEventSub {
     }
 
     const paginator = this.apiClient.clips.getClipsForBroadcasterPaginated({ id: this.userId }, clipFilter)
-    let clips: PlainClip[] = []
+    const clips: PlainClip[] = []
     let done = false
     while (!done && clips.length < this.clipsLimit) {
       // done is true when the new length of clips is unchanged
       done = clips.length === await paginator.getNext()
         .then((res) => Promise.all(res.map((item) => this.clipToPlain(item))))
-        .then((plains) => clips.push(...plains.slice(0, this.clipsLimit - clips.length)))
+        .then((plains) => plains.sort((a, b) => a.created.localeCompare(b.created)))
+        .then((plains) => plains.reverse())
+        .then((plains) => clips.push(...plains.slice(0, this.clipsLimit)))
     }
-
-    clips = clips.sort((a, b) => a.created.localeCompare(b.created))
 
     const clipPaths = clips.map((clip) => path.join(this.clipsDir, clip.id + '.mp4'))
     for (let i = 0; i < clips.length; i++) {

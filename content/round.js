@@ -2,7 +2,7 @@ const cornerBorderProp = {
   0: 'borderTopLeftRadius',
   1: 'borderBottomLeftRadius',
   2: 'borderBottomRightRadius',
-  3: 'borderTopRightRadius',
+  3: 'borderTopRightRadius'
 }
 
 /** @param {HTMLElement} elem */
@@ -11,7 +11,7 @@ function rounded (elem) {
     .split(',')
     .map((c) => c.trim().toLowerCase()))
 
-  function round() {
+  function round () {
     const rect = elem.getBoundingClientRect()
     const dim = (Math.min(rect.width, rect.height) / 2).toFixed() + 'px'
 
