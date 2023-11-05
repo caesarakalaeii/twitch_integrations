@@ -37,9 +37,9 @@ export class AuthServer implements AuthProvider {
     this.config = _.merge(defaultConfig, config) as unknown as AuthServerConfig
     this.refreshingProvider = new RefreshingAuthProvider({
       clientId: this.config.clientId,
-      clientSecret: this.config.clientSecret,
-      onRefresh: () => this.refresh(userIdFn())
+      clientSecret: this.config.clientSecret
     })
+    this.refreshingProvider.onRefresh(async () => this.refresh(userIdFn()))
     this.app = express()
     this.init()
   }

@@ -231,6 +231,36 @@ export class CustomEventSub {
     }
   }
 
+  // Maybe use this if manual subs are needed
+  // private subscribe (subType: EventSubChannelCheerEvent|
+  //   EventSubChannelFollowEvent|
+  //   EventSubChannelRaidEvent|
+  //   EventSubChannelRedemptionAddEvent|
+  //   EventSubChannelSubscriptionEvent|
+  //   EventSubChannelSubscriptionGiftEvent|
+  //   EventSubChannelSubscriptionMessageEvent) {
+  //     const transport =
+  //   if (subType instanceof EventSubChannelCheerEvent) {
+  //   // Handle EventSubChannelFollowEvent
+  //   this.apiClient.eventSub.subscribeToChannelCheerEvents(this.config.appAuth.clientId, )
+  //
+  //   } else if (subType instanceof EventSubChannelFollowEvent) {
+  //   // Handle EventSubChannelFollowEvent
+  //   } else if (subType instanceof EventSubChannelRaidEvent) {
+  //   // Handle EventSubChannelRaidEvent
+  //   } else if (subType instanceof EventSubChannelRedemptionAddEvent) {
+  //   // Handle EventSubChannelRedemptionAddEvent
+  //   } else if (subType instanceof EventSubChannelSubscriptionEvent) {
+  //   // Handle EventSubChannelSubscriptionEvent
+  //   } else if (subType instanceof EventSubChannelSubscriptionGiftEvent) {
+  //   // Handle EventSubChannelSubscriptionGiftEvent
+  //   } else if (subType instanceof EventSubChannelSubscriptionMessageEvent) {
+  //   // Handle EventSubChannelSubscriptionMessageEvent
+  //   } else {
+  //   // Handle other cases or raise an error for unknown types
+  //   }
+  // }
+
   async init () {
     const appToken = await this.appAuth.getAnyAccessToken()
     console.log('app token received:', appToken?.scope)
@@ -244,8 +274,8 @@ export class CustomEventSub {
     const token = await this.userAuth.getAccessTokenForUser(user)
     console.log('user token received:', token?.scope)
 
-    await this.apiClient.eventSub.deleteAllSubscriptions()
-    console.log('deleted all subscriptions')
+    // await this.apiClient.eventSub.deleteAllSubscriptions()
+    // console.log('deleted all subscriptions')
 
     try {
       await this.listener.start()
@@ -377,13 +407,14 @@ export class CustomEventSub {
     }
 
     if (sub instanceof EventSubChannelSubscriptionMessageEvent) {
-      s.parsedEmotes = sub.parseEmotes()
-      _.merge(s, <Partial<SubMessageEventPick>>{
-        cumulativeMonths: sub.cumulativeMonths,
-        durationMonths: sub.durationMonths,
-        streakMonths: sub.streakMonths,
-        messageText: sub.messageText
-      })
+      // TODO: parseChatMessages currently Faulty for what ever reason
+      // s.parsedEmotes = parseChatMessage(sub.messageText, sub.emoteOffsets);
+      // _.merge(s, <Partial<SubMessageEventPick>>{
+      //   cumulativeMonths: sub.cumulativeMonths,
+      //   durationMonths: sub.durationMonths,
+      //   streakMonths: sub.streakMonths,
+      //   messageText: sub.messageText
+      // })
     }
 
     return s

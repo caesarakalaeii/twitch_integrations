@@ -8,12 +8,9 @@ import _ from 'lodash'
 import { lookup } from 'mime-types'
 import path from 'path'
 import repl from 'repl'
-import { Arduino, ArduinoConfig, Keyword } from './arduino'
 import { EventCollector } from './event_collector'
 import { CustomEventSub, EventName, Config as CaesarEventSubConfig } from './eventsub'
 import { Queue } from './queue'
-import { Relais, RelaisConfig } from './relais'
-import { Taser, TaserConfig } from './taser'
 import { mockEvents, mockSubs } from './html_builder'
 
 type Credentials = {
@@ -23,9 +20,6 @@ type Credentials = {
 
 export type Config = {
   eventSub: CaesarEventSubConfig
-  relais?: RelaisConfig
-  arduino?: ArduinoConfig
-  taser?: TaserConfig
   time: {
     sub: number
     bit: number
@@ -91,8 +85,6 @@ type Scope = {
   config: Config
   ecol: EventCollector
   esub: CustomEventSub
-  arduino: Arduino
-  relais: Relais
 }
 
 export const CHUNK_SIZE = 10 ** 6 // 1MB chunk size
@@ -153,7 +145,7 @@ export async function fileStream (filePath: string, req: Request, res: Response,
   }
 }
 
-export async function startServer ({ config, arduino, relais, ecol, esub }: Scope) {
+export async function startServer ({ config, ecol, esub }: Scope) {
   const app = express()
 
   app.set('view engine', 'ejs')
@@ -205,43 +197,6 @@ export async function startServer ({ config, arduino, relais, ecol, esub }: Scop
     console.log('using /credits endpoint')
   }
 
-  if (arduino) {
-    app.post('/arduino/:keyword/:command', (req, res) => {
-      const { keyword, command } = req.params
-      const t = String(req.query.t)
-
-      if (!arduino.isKeyword(keyword)) {
-        return res.status(400).end('Illegal Keyword')
-      }
-
-      switch (command.toLowerCase()) {
-        case 'on':
-          arduino.on(keyword as Keyword)
-          res.sendStatus(200)
-          break
-        case 'onfor':
-          arduino.onFor(keyword as Keyword, t ? Number(t) : 1000)
-            .then(() => res.sendStatus(200))
-            .catch(err => {
-              console.error(err)
-              res.sendStatus(500)
-            })
-          break
-        case 'off':
-          arduino.off(keyword as Keyword)
-          res.sendStatus(200)
-          break
-        default:
-          res.status(400).end('Unknown Command')
-          break
-      }
-    })
-    console.log('API using', '/arduino/:keyword/:command')
-    console.log('- keywords:', arduino.keywords)
-    console.log('- commands', ['on', 'off', 'onfor'])
-    console.log('the command \'onfor\' allows for query parameter \'t\' to give the time in ms')
-  }
-
   return await new Promise<void>((resolve) => {
     app.listen(config.api.port, config.api.hostname, () => {
       console.log(`API listening on ${config.api.hostname || 'localhost'}:${config.api.port}`)
@@ -253,59 +208,27 @@ export async function startServer ({ config, arduino, relais, ecol, esub }: Scop
 export async function main () {
   const config = await loadFile<Config>('config.js')
   const esub = new CustomEventSub(config.eventSub)
-  let relais: Relais
-  let arduino: Arduino
-  let taser: Taser
   let eventCollector: EventCollector
   const queue = new Queue()
 
-  if (config.relais) relais = new Relais(config.relais)
-  if (config.arduino) arduino = new Arduino(config.arduino)
-  if (config.taser) {
-    taser = new Taser(config.taser)
-      .on('dec', async (power) => {
-        if (arduino) await arduino.onFor('shockDown', config.time.control)
-        console.log('taser power has been decreased to power', power)
-      })
-      .on('inc', async (power) => {
-        if (arduino) await arduino.onFor('shockUp', config.time.control)
-        console.log('taser power has been increased to power', power)
-      })
-
-    console.log('taser config:', config.taser)
-  }
   if (config?.credits) {
     eventCollector = new EventCollector()
   }
 
   esub.on(EventName.SUB, e => {
     if (!e.isGift) {
-      if (relais) queue.add(() => relais.onFor('relais', config.time.sub))
-      if (arduino) queue.add(() => arduino.onFor('money', config.time.sub))
       if (config?.credits?.newSubs) queue.add(() => eventCollector.addNewSub(e))
     }
   })
 
   esub.on(EventName.GIFTSUB, e => {
-    if (relais) queue.add(() => relais.onFor('relais', config.time.sub * e.amount))
-    if (arduino) queue.add(() => arduino.onFor('money', config.time.sub * e.amount))
     if (config?.credits?.gifts)queue.add(() => eventCollector.addGifted(e))
   })
 
   esub.on(EventName.CHEER, e => {
     if (e.bits >= config.minBits) {
-      if (relais) queue.add(() => relais.onFor('relais', config.time.bit * e.bits))
-      if (arduino) queue.add(() => arduino.onFor('money', config.time.bit * e.bits))
       if (config?.credits?.cheers) queue.add(() => eventCollector.addCheer(e))
     }
-  })
-
-  esub.on(EventName.POINTSDOWN, e => {
-    if (taser) taser.decreasePower()
-  })
-
-  esub.on(EventName.POINTSUP, e => {
-    if (taser) taser.increasePower()
   })
 
   esub.on(EventName.REDEEM, e => {
@@ -321,7 +244,7 @@ export async function main () {
   })
 
   if (config.api) {
-    await startServer({ config, arduino, relais, ecol: eventCollector, esub })
+    await startServer({ config, ecol: eventCollector, esub })
   }
 
   await esub.init()
