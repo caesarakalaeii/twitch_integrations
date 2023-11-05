@@ -95,9 +95,9 @@ export class AuthServer implements AuthProvider {
 
   init () {
     const url = new URL(this.config.redirectUri)
-    if (url.hostname.toLowerCase() !== 'localhost') {
-      throw new Error('redirect URI can only be on http://localhost')
-    }
+    // if (url.hostname.toLowerCase() !== 'localhost') {
+    //  throw new Error('redirect URI can only be on http://localhost')
+    // }
     this.port = Number(url.port) || 8080
 
     this.app.get('/auth', (req, res) => {
