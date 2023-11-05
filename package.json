@@ -8,8 +8,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npm exec tsc",
     "start:dev": "node -r ts-node/register src/start.ts",
-    "start": "node dist/start.js",
-    "arduino-cli": "node -r ts-node/register src/arduino-cli.ts"
+    "start": "node dist/start.js"
   },
   "keywords": [],
   "author": "",
@@ -51,7 +50,6 @@
     "mime-types": "^2.1.35",
     "onoff": "^6.0.3",
     "prompts": "^2.4.2",
-    "serialport": "^10.4.0",
     "string-argv": "^0.3.1",
     "yargs": "^17.5.1"
   }
