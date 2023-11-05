@@ -165,8 +165,6 @@ export class CustomEventSub {
   public readonly event: EventEmitter = new EventEmitter()
   private __userId: string
   public get userId () { return this.__userId }
-  private downId: string
-  private upId: string
   private redeemId: string
   private clipsLimit: number
   public readonly start = new Date()
@@ -178,8 +176,6 @@ export class CustomEventSub {
     this.userAuth = new AuthServer(this.config.userAuth, () => ({ id: this.userId }))
     this.apiClient = new ApiClient({ authProvider: this.appAuth })
     this.userApiClient = new ApiClient({ authProvider: this.userAuth })
-    this.upId = this.config.upId
-    this.downId = this.config.downId
     this.redeemId = this.config.redeemId
     this.clipsDir = this.config.clipsDir || './clips'
     this.clipsLimit = Math.max(this.config.clipsLimit, 0) || 10
@@ -313,16 +309,6 @@ export class CustomEventSub {
     this.handleSub(EventName.REDEEM, () => this.listener.onChannelRedemptionAddForReward({ id: this.userId }, this.redeemId, e => {
       console.log(e.userDisplayName, 'redeemed Credits with this message:', e.input)
       this.event.emit(EventName.REDEEM, e)
-    }))
-
-    this.handleSub(EventName.POINTSDOWN, () => this.listener.onChannelRedemptionAddForReward({ id: this.userId }, this.downId, e => {
-      console.log(e.userDisplayName, 'redeemed Power Down with this message:', e.input)
-      this.event.emit(EventName.POINTSDOWN, e)
-    }))
-
-    this.handleSub(EventName.POINTSUP, () => this.listener.onChannelRedemptionAddForReward({ id: this.userId }, this.upId, e => {
-      console.log(e.userDisplayName, 'redeemed Power Up with this message:', e.input)
-      this.event.emit(EventName.POINTSUP, e)
     }))
 
     this.handleSub(EventName.FOLLOW, () => this.listener.onChannelFollow({ id: this.userId }, { id: this.userId }, e => {
