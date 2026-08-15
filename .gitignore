@@ -5,3 +5,6 @@ config*
 /*.html
 /clips
 /subs.json
+result
+result-*
+.direnv/
